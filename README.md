@@ -18,16 +18,6 @@ LeetGFGHub is a premium Chrome Extension that seamlessly synchronizes your accep
 - **GitHub as the Source of Truth:** Your data is backed up to GitHub (`.dsa-sync/`). Easily restore analytics if you change devices.
 - **Premium UI:** A stunning, Apple-inspired interface with Dark/Light modes and glassmorphism.
 
-## 📸 Screenshots
-
-| Dashboard | Analytics |
-|:---:|:---:|
-| ![Dashboard](screenshots/dashboard.webp) | ![Analytics](screenshots/analytics.webp) |
-
-| Settings | Auto-Sync in Action |
-|:---:|:---:|
-| ![Settings](screenshots/settings.webp) | ![Sync](screenshots/sync.webp) |
-
 ## 🚀 Installation
 
 1. **Clone the repository:**
