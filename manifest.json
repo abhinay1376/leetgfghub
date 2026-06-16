@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "LeetGFGHub",
+  "version": "2.0.0",
+  "description": "Automatically sync LeetCode and GeeksForGeeks solutions to GitHub.",
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "notifications"
+  ],
+
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://www.geeksforgeeks.org/*",
+    "https://api.github.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["src/commit-dialog.js", "content-leetcode.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.geeksforgeeks.org/*"],
+      "js": ["src/commit-dialog.js", "content-gfg.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LeetGFGHub",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "web_accessible_resources": []
+}

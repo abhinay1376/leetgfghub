@@ -1,0 +1,28 @@
+name: Build Validation
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Validate Manifest
+      run: |
+        if [ ! -f "manifest.json" ]; then
+          echo "manifest.json not found!"
+          exit 1
+        fi
+        cat manifest.json | jq . > /dev/null
+    - name: Package Extension
+      run: |
+        zip -r extension.zip . -x "*.git*" -x ".github/*" -x "screenshots/*" -x "docs/*"
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: extension-build
+        path: extension.zip
