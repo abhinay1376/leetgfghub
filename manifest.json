@@ -1,14 +1,16 @@
 {
   "manifest_version": 3,
   "name": "LeetGFGHub",
-  "version": "2.0.0",
-  "description": "Automatically sync LeetCode and GeeksForGeeks solutions to GitHub.",
+  "version": "3.0.0",
+  "description": "Automatically sync your LeetCode and GeeksForGeeks accepted solutions to GitHub.",
 
   "permissions": [
     "storage",
     "activeTab",
     "scripting",
-    "notifications"
+    "notifications",
+    "tabs",
+    "clipboardRead"
   ],
 
   "host_permissions": [

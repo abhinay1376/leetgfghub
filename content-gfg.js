@@ -191,6 +191,8 @@
         const code = await getCodeFromPageContext();
         if (code && code.trim().length > 0) {
           showCommitDialog({ ...meta, platform: "gfg", code, language: getLanguage() });
+          // Reset after 3s so re-submissions on the same page can re-trigger
+          setTimeout(() => { pushed = false; }, 3000);
         } else {
           // Code extraction failed — reset so user can try again
           pushed = false;

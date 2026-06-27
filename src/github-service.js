@@ -109,7 +109,7 @@ export class GitHubService {
    */
   async verifyToken() {
     const user = await this._fetch(`${this._base}/user`);
-    return { login: user.login, name: user.name };
+    return { login: user.login, name: user.name, avatarUrl: user.avatar_url, email: user.email };
   }
 
   /**
@@ -255,6 +255,66 @@ export class GitHubService {
       type: item.type, // "file" | "dir"
       path: item.path,
     }));
+  }
+
+  /**
+   * List all repositories for the authenticated user.
+   * Fetches all pages (up to 200 repos total).
+   * @param {number} [perPage=100]
+   * @returns {Promise<Array<{name:string, fullName:string, private:boolean,
+   *                          description:string, branch:string, owner:string}>>}
+   */
+  async listUserRepositories(perPage = 100) {
+    const repos = [];
+    let page = 1;
+    while (true) {
+      const url = `${this._base}/user/repos?per_page=${perPage}&page=${page}&sort=updated&affiliation=owner`;
+      let batch;
+      try {
+        batch = await this._fetch(url);
+      } catch (_) {
+        break;
+      }
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      for (const r of batch) {
+        repos.push({
+          name:        r.name,
+          fullName:    r.full_name,
+          private:     r.private,
+          description: r.description || "",
+          branch:      r.default_branch || "main",
+          owner:       r.owner?.login || "",
+        });
+      }
+      if (batch.length < perPage) break;
+      page++;
+    }
+    return repos;
+  }
+
+  /**
+   * Recursively list all folders under a path (max 2 levels deep).
+   * @param {string} owner
+   * @param {string} repo
+   * @param {string} [basePath=""]
+   * @param {number} [depth=0]
+   * @returns {Promise<string[]>}  array of folder paths
+   */
+  async listFoldersRecursive(owner, repo, basePath = "", depth = 0) {
+    const items = await this.listDirectory(owner, repo, basePath);
+    const folders = items.filter(i => i.type === "dir" && !i.name.startsWith("."));
+    const result = folders.map(f => f.path);
+
+    if (depth < 1) {
+      for (const folder of folders) {
+        try {
+          const nested = await this.listFoldersRecursive(owner, repo, folder.path, depth + 1);
+          result.push(...nested);
+        } catch (_) { /* skip unreadable dirs */ }
+      }
+    }
+
+    return result;
   }
 }
 

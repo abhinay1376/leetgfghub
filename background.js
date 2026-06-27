@@ -16,7 +16,6 @@ import {
   generateProblemPath,
   buildProblemReadme,
   buildRootReadme,
-  parseRootReadme,
   friendlyError,
 } from "./src/utils.js";
 import {
@@ -26,6 +25,9 @@ import {
   syncAfterPush,
   computeAnalytics,
 } from "./src/sync-service.js";
+import {
+  getToken, clearAuth,
+} from "./src/storage-service.js";
 
 // ---------------------------------------------------------------------------
 // Message router
@@ -36,7 +38,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handlePush(message.data)
       .then(sendResponse)
       .catch(err => sendResponse({ success: false, error: friendlyError(err) }));
-    return true; // keep channel open for async response
+    return true;
   }
 
   if (message.type === "VERIFY_CONNECTION") {
@@ -71,6 +73,49 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleSaveConfig(message.data)
       .then(sendResponse)
       .catch(err => sendResponse({ success: false, error: friendlyError(err) }));
+    return true;
+  }
+
+  // ── PAT-based auth helpers ──────────────────────────────────────────
+
+  // Validate a PAT by calling /user — returns full profile on success
+  if (message.type === "VERIFY_PAT") {
+    const { token } = message.data;
+    if (!token) { sendResponse({ success: false, error: "No token provided" }); return true; }
+    const gh = new GitHubService(token);
+    gh.verifyToken()
+      .then(user => sendResponse({ success: true, user }))
+      .catch(err => sendResponse({ success: false, error: friendlyError(err) }));
+    return true;
+  }
+
+  if (message.type === "AUTH_LOGOUT") {
+    clearAuth()
+      .then(() => sendResponse({ success: true }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  // ── Repository listing ─────────────────────────────────────────────────
+
+  if (message.type === "LIST_USER_REPOS") {
+    getToken().then(async (token) => {
+      if (!token) return sendResponse({ success: false, error: "Not authenticated" });
+      const gh = new GitHubService(token);
+      const repos = await gh.listUserRepositories();
+      sendResponse({ success: true, repos });
+    }).catch(err => sendResponse({ success: false, error: friendlyError(err) }));
+    return true;
+  }
+
+  if (message.type === "LIST_REPO_FOLDERS_V2") {
+    const { owner, repo } = message.data;
+    getToken().then(async (token) => {
+      if (!token) return sendResponse({ success: false, error: "Not authenticated" });
+      const gh = new GitHubService(token);
+      const folders = await gh.listFoldersRecursive(owner, repo);
+      sendResponse({ success: true, folders });
+    }).catch(err => sendResponse({ success: false, error: friendlyError(err) }));
     return true;
   }
 });
@@ -173,42 +218,29 @@ async function handlePush(payload) {
  * @param {string} folderPath
  */
 async function updateRootReadme(gh, owner, repo, payload, folderPath) {
+  // ── Step 1: Read the analytics file (single source of truth for counts) ──
+  let analytics = await readSyncFile(gh, owner, repo, "analytics.json");
+  const allEntries = (analytics && Array.isArray(analytics.entries))
+    ? analytics.entries
+    : [];
+
+  // Compute stats from the full analytics entry list — never count from README
+  const stats = computeAnalytics(allEntries);
+
+  // ── Step 2: Read the existing README content (to preserve custom sections) ─
   const existing = await gh.getFile(owner, repo, "README.md");
   let existingText = "";
-
   if (existing?.content) {
-    // GitHub API returns base64-encoded content
     existingText = _fromBase64(existing.content.replace(/\n/g, ""));
   }
 
-  const { leetcodeProblems, gfgProblems } = parseRootReadme(existingText);
-
-  // Check if this problem is already in the list (avoid duplicates)
-  if (payload.platform === "leetcode") {
-    const alreadyExists = leetcodeProblems.some(p => p.path.includes(folderPath));
-    if (!alreadyExists) {
-      leetcodeProblems.push({
-        number:     payload.problemNumber,
-        title:      payload.problemTitle,
-        difficulty: payload.difficulty,
-        path:       folderPath,
-      });
-      // Sort by problem number
-      leetcodeProblems.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
-    }
-  } else {
-    const alreadyExists = gfgProblems.some(p => p.path.includes(folderPath));
-    if (!alreadyExists) {
-      gfgProblems.push({ title: payload.problemTitle, path: folderPath });
-      gfgProblems.sort((a, b) => a.title.localeCompare(b.title));
-    }
-  }
-
+  // ── Step 3: Build new README (marker-based, only replaces stat block) ─────
   const config   = await loadConfig();
   const repoName = config.repoName || "DSA Solutions";
-  const content  = buildRootReadme({ leetcodeProblems, gfgProblems, repoName });
 
-  await gh.createOrUpdateFile(owner, repo, "README.md", content, "chore: update root README");
+  const content = buildRootReadme({ repoName, stats, existingContent: existingText });
+
+  await gh.createOrUpdateFile(owner, repo, "README.md", content, "chore: update README stats [LeetGFGHub]");
 }
 
 // ---------------------------------------------------------------------------

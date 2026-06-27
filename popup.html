@@ -1,687 +1,302 @@
 <!DOCTYPE html>
-<html lang="en" class="theme-dark">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DSA Git Pusher</title>
-  <link rel="stylesheet" href="src/popup.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LeetGFGHub</title>
+<link rel="stylesheet" href="src/popup.css">
 </head>
 <body>
+<div id="app">
 
-  <!-- LEFT NAVIGATION RAIL -->
-  <nav class="nav-rail" aria-label="Main Navigation">
-    <div class="logo-container" aria-hidden="true">
-      ⚡
-      <div class="logo-glow"></div>
-    </div>
-    
-    <button class="nav-item active" data-tab="dashboard" aria-label="Dashboard" id="nav-btn-dashboard">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      <span>Dash</span>
-    </button>
-    
-    <button class="nav-item" data-tab="repositories" aria-label="Repositories" id="nav-btn-repositories">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      <span>Repos</span>
-    </button>
-    
-    <button class="nav-item" data-tab="pending" aria-label="Pending Pushes" id="nav-btn-pending">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Pending</span>
-    </button>
-    
-    <button class="nav-item" data-tab="activity" aria-label="Activity History" id="nav-btn-activity">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      <span>Activity</span>
-    </button>
-    
-    <button class="nav-item" data-tab="settings" aria-label="Settings" id="nav-btn-settings">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-      <span>Settings</span>
-    </button>
-    
-    <button class="nav-item" data-tab="about" aria-label="About" id="nav-btn-about">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-      <span>About</span>
-    </button>
-  </nav>
+<!-- ══════════════════════════════════════════ ONBOARDING ══ -->
+<div id="screen-onboarding" class="screen">
+  <div class="wizard-wrap">
+    <div class="progress-dots" id="progress-dots"></div>
 
-  <!-- MAIN AREA -->
-  <main class="main-area">
-    <!-- HEADER -->
-    <header class="header">
-      <div class="header-title-container">
-        <h1 class="header-title" id="page-title-label">Dashboard</h1>
-        <div class="header-subtitle" id="header-subtitle-label">Auto Git Sync Active</div>
-      </div>
-      <div class="connection-pill" id="connection-indicator" title="GitHub Connection Status">
-        <div class="status-indicator" id="status-indicator-dot"></div>
-        <span id="connection-label">Disconnected</span>
-      </div>
-    </header>
-
-    <!-- PAGES CONTAINER -->
-    <div class="pages-container">
-      
-      <!-- 1. DASHBOARD PAGE -->
-      <section class="page-pane active" id="page-pane-dashboard" aria-labelledby="page-title-label">
-        
-        <!-- KPI METRICS GRID -->
-        <div class="kpi-grid">
-          <div class="glass-card kpi-card">
-            <span class="kpi-title">Total Solved</span>
-            <span class="kpi-value" id="stat-total">0</span>
-            <span class="kpi-sub">problems</span>
-          </div>
-          <div class="glass-card kpi-card">
-            <span class="kpi-title">Current Streak</span>
-            <span class="kpi-value" id="stat-current-streak">0</span>
-            <span class="kpi-sub">days active</span>
-          </div>
-          <div class="glass-card kpi-card">
-            <span class="kpi-title">Longest Streak</span>
-            <span class="kpi-value" id="stat-longest-streak">0</span>
-            <span class="kpi-sub">days max</span>
-          </div>
-          <div class="glass-card kpi-card">
-            <span class="kpi-title">This Week</span>
-            <span class="kpi-value" id="stat-this-week">0</span>
-            <span class="kpi-sub">completed</span>
-          </div>
-          <div class="glass-card kpi-card">
-            <span class="kpi-title">This Month</span>
-            <span class="kpi-value" id="stat-this-month">0</span>
-            <span class="kpi-sub">completed</span>
-          </div>
-          <div class="glass-card kpi-card">
-            <span class="kpi-title">Pending</span>
-            <span class="kpi-value" id="stat-pending" style="color: var(--warning);">0</span>
-            <span class="kpi-sub">in queue</span>
+    <!-- Step 0: Welcome -->
+    <div class="wizard-step active" id="step-0">
+      <div class="text-center stack stack-3">
+        <div style="display:flex;justify-content:center">
+          <div class="logo-mark">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           </div>
         </div>
-
-        <!-- PENDING BANNER (hidden when 0 pending) -->
-        <div class="alert-box info" id="pending-banner" style="display: none;">
-          <span>📥</span>
-          <span id="pending-banner-text">0 solutions queued locally</span>
-          <a id="view-pending-link" style="margin-left: auto; font-size: 10px; color: var(--primary); font-weight: 700; cursor: pointer; text-decoration: none;">View →</a>
-        </div>
-
-        <!-- CONTRIBUTION HEATMAP -->
-        <div class="glass-card heatmap-container">
-          <div class="heatmap-header">
-            <h2 class="section-title" style="margin-bottom: 0;">Activity Heatmap</h2>
-            <div class="heatmap-stats">
-              <span>Active Days: <strong id="stat-active-days" style="color: var(--text-primary);">0</strong></span>
-            </div>
-          </div>
-          <div class="heatmap-scroll-wrapper">
-            <div class="month-labels-container" id="heatmap-month-row"></div>
-            <div class="heatmap-grid" id="heatmap-grid-inner">
-              <!-- Dynamically populated 7x24 grid representing last 24 weeks -->
-            </div>
-          </div>
-          <div class="heatmap-tooltip" id="heatmap-cell-tooltip"></div>
-        </div>
-
-        <!-- DIFFICULTY & PLATFORM DISTRIBUTION -->
-        <div class="glass-card">
-          <div class="mini-tab-bar" id="gauge-filter-tabs">
-            <div class="mini-tab active" data-filter="combined">Combined</div>
-            <div class="mini-tab" data-filter="leetcode">LeetCode</div>
-            <div class="mini-tab" data-filter="gfg">GeeksForGeeks</div>
-          </div>
-
-          <div class="donut-gauge-container">
-            <!-- Platform Donut -->
-            <div class="donut-svg-wrapper">
-              <svg width="90" height="90" viewBox="0 0 36 36" class="donut-svg">
-                <!-- Outer Track -->
-                <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--border-color)" stroke-width="2.5"></circle>
-                <!-- Leetcode segment -->
-                <circle cx="18" cy="18" r="15.915" fill="none" id="donut-seg-lc" stroke="var(--badge-lc-text)" stroke-width="3.5" stroke-dasharray="100 0" stroke-dashoffset="25" stroke-linecap="round" style="transition: stroke-dasharray 0.6s ease;"></circle>
-                <!-- GFG segment -->
-                <circle cx="18" cy="18" r="15.915" fill="none" id="donut-seg-gfg" stroke="var(--badge-gfg-text)" stroke-width="3.5" stroke-dasharray="0 100" stroke-dashoffset="25" stroke-linecap="round" style="transition: stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease;"></circle>
-              </svg>
-              <div class="donut-center-label">
-                <div class="donut-center-num" id="donut-center-total">0</div>
-                <div class="donut-center-lbl">Total</div>
-              </div>
-            </div>
-
-            <!-- Difficulty Bars -->
-            <div class="gauge-stats-column">
-              <!-- Easy -->
-              <div class="difficulty-gauge-row">
-                <div class="difficulty-gauge-lbl-row">
-                  <span style="color: var(--success);">Easy</span>
-                  <span id="lbl-gauge-easy">0 / 0</span>
-                </div>
-                <div class="diff-progress-track">
-                  <div class="diff-progress-fill" id="fill-gauge-easy" style="background-color: var(--success);"></div>
-                </div>
-              </div>
-              <!-- Medium -->
-              <div class="difficulty-gauge-row">
-                <div class="difficulty-gauge-lbl-row">
-                  <span style="color: var(--warning);">Medium</span>
-                  <span id="lbl-gauge-medium">0 / 0</span>
-                </div>
-                <div class="diff-progress-track">
-                  <div class="diff-progress-fill" id="fill-gauge-medium" style="background-color: var(--warning);"></div>
-                </div>
-              </div>
-              <!-- Hard -->
-              <div class="difficulty-gauge-row">
-                <div class="difficulty-gauge-lbl-row">
-                  <span style="color: var(--error);">Hard</span>
-                  <span id="lbl-gauge-hard">0 / 0</span>
-                </div>
-                <div class="diff-progress-track">
-                  <div class="diff-progress-fill" id="fill-gauge-hard" style="background-color: var(--error);"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SOLVING TREND LINE CHART -->
-        <div class="glass-card">
-          <div class="trend-header-row">
-            <h2 class="section-title" style="margin-bottom: 0;">Solving Trend</h2>
-            <div class="trend-period-buttons" id="trend-period-selectors">
-              <button class="trend-btn active" data-period="7">7D</button>
-              <button class="trend-btn" data-period="30">30D</button>
-              <button class="trend-btn" data-period="90">90D</button>
-              <button class="trend-btn" data-period="all">ALL</button>
-            </div>
-          </div>
-          <div class="trend-chart-wrapper">
-            <svg class="trend-chart-svg" id="trend-chart-container" preserveAspectRatio="none" viewBox="0 0 300 90">
-              <defs>
-                <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.3"></stop>
-                  <stop offset="100%" stop-color="var(--primary)" stop-opacity="0.00"></stop>
-                </linearGradient>
-              </defs>
-              <!-- Areas and lines injected dynamically -->
-              <path class="chart-area-path" id="trend-area-path" d="M 0 90 L 300 90 Z"></path>
-              <path class="chart-path" id="trend-line-path" d="M 0 90"></path>
-            </svg>
-          </div>
-        </div>
-
-        <!-- LANGUAGE & TOPIC ANALYTICS -->
-        <div class="skills-column-grid">
-          <!-- Languages -->
-          <div class="glass-card" style="padding: 12px 14px;">
-            <h2 class="section-title">Languages</h2>
-            <div class="skills-card-list" id="language-list-container">
-              <!-- Dynamically populated language progress rows -->
-            </div>
-          </div>
-
-          <!-- Topics -->
-          <div class="topic-analytics-box">
-            <div class="topic-metric-card">
-              <label>Top Topic</label>
-              <span id="topic-top">None</span>
-            </div>
-            <div class="topic-metric-card">
-              <label>Frequent</label>
-              <span id="topic-freq">None</span>
-            </div>
-            <div class="topic-metric-card">
-              <label>Weakest Category</label>
-              <span id="topic-weak">None</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- ACHIEVEMENTS -->
-        <div class="glass-card">
-          <h2 class="section-title" style="margin-bottom: var(--spacing-md);">Achievements</h2>
-          <div class="achievements-grid" id="achievements-list-grid">
-            <!-- 8 Achievement Badges -->
-            <div class="achievement-cell" id="ach-first" title="Solve 1 problem to unlock.">
-              <span class="achievement-icon">🌱</span>
-              <span class="achievement-title">First Step</span>
-            </div>
-            <div class="achievement-cell" id="ach-10" title="Solve 10 problems to unlock.">
-              <span class="achievement-icon">🔥</span>
-              <span class="achievement-title">Ten Solver</span>
-            </div>
-            <div class="achievement-cell" id="ach-50" title="Solve 50 problems to unlock.">
-              <span class="achievement-icon">⚡</span>
-              <span class="achievement-title">Half Century</span>
-            </div>
-            <div class="achievement-cell" id="ach-100" title="Solve 100 problems to unlock.">
-              <span class="achievement-icon">🏆</span>
-              <span class="achievement-title">Century Club</span>
-            </div>
-            <div class="achievement-cell" id="ach-250" title="Solve 250 problems to unlock.">
-              <span class="achievement-icon">🎖</span>
-              <span class="achievement-title">Elite Solver</span>
-            </div>
-            <div class="achievement-cell" id="ach-500" title="Solve 500 problems to unlock.">
-              <span class="achievement-icon">👑</span>
-              <span class="achievement-title">Grandmaster</span>
-            </div>
-            <div class="achievement-cell" id="ach-streak" title="Maintain a 7-day solve streak.">
-              <span class="achievement-icon">🚀</span>
-              <span class="achievement-title">7D Streak</span>
-            </div>
-            <div class="achievement-cell" id="ach-hard" title="Solve at least 5 Hard difficulties.">
-              <span class="achievement-icon">💎</span>
-              <span class="achievement-title">Hardcore</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- MINI RECENT FEED -->
         <div>
-          <div class="small-title-bar">
-            <h2 class="section-title">Recent Activity</h2>
-            <a class="view-all" id="dashboard-view-all-activity">All Feed &rarr;</a>
-          </div>
-          <div class="glass-card" style="padding: 10px 14px;">
-            <div id="mini-feed-container" style="display: flex; flex-direction: column; gap: var(--spacing-md);">
-              <!-- Injected dynamically -->
-            </div>
-          </div>
+          <div class="text-xl text-bold" style="letter-spacing:-.4px">LeetGFGHub</div>
+          <div class="caption mt-1" style="max-width:280px;margin:6px auto 0">Automatically sync your accepted solutions to GitHub — LeetCode &amp; GeeksForGeeks.</div>
         </div>
-
-      </section>
-
-      <!-- 2. REPOSITORIES PAGE -->
-      <section class="page-pane" id="page-pane-repositories">
-        <div class="glass-card" id="repo-card-lc">
-          <div class="repo-box-header">
-            <div class="repo-box-badge">
-              <span class="platform-badge lc">LeetCode</span>
-              <span class="repo-box-title" id="lc-repo-name-label">Unlinked</span>
-            </div>
-            <span class="repo-status-label err" id="lc-repo-status-pill">Disconnected</span>
-          </div>
-          
-          <div class="repo-detail-row">
-            <label>Repository URL</label>
-            <span id="lc-repo-url-label">None</span>
-          </div>
-          <div class="repo-detail-row">
-            <label>Target Folder</label>
-            <span id="lc-repo-folder-label">LeetCode/</span>
-          </div>
-        </div>
-
-        <div class="glass-card" id="repo-card-gfg">
-          <div class="repo-box-header">
-            <div class="repo-box-badge">
-              <span class="platform-badge gfg">GFG</span>
-              <span class="repo-box-title" id="gfg-repo-name-label">Unlinked</span>
-            </div>
-            <span class="repo-status-label err" id="gfg-repo-status-pill">Disconnected</span>
-          </div>
-          
-          <div class="repo-detail-row">
-            <label>Repository URL</label>
-            <span id="gfg-repo-url-label">None</span>
-          </div>
-          <div class="repo-detail-row">
-            <label>Target Folder</label>
-            <span id="gfg-repo-folder-label">GFG/</span>
-          </div>
-        </div>
-
-        <button class="btn-premium" id="repos-verify-btn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-          Verify All Connections
-        </button>
-        <div id="repos-status-message"></div>
-      </section>
-
-      <!-- 3. PENDING PUSHES PAGE -->
-      <section class="page-pane" id="page-pane-pending">
-        <div class="pending-list" id="pending-items-container">
-          <!-- Dynamically populated or empty state -->
-        </div>
-      </section>
-
-      <!-- 4. ACTIVITY PAGE -->
-      <section class="page-pane" id="page-pane-activity">
-        <div class="timeline" id="activity-timeline-container">
-          <!-- Dynamically populated timeline or empty state -->
-        </div>
-      </section>
-
-      <!-- 5. SETTINGS PAGE (APPLE SETTINGS INSPIRED) -->
-      <section class="page-pane" id="page-pane-settings">
-        
-        <h2 class="section-title">GitHub Profile</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #24292F;" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/></svg>
-              </div>
-              <div>
-                <div class="settings-row-title">GitHub Username</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <input type="text" class="settings-input" id="githubUser" placeholder="your-username" aria-label="GitHub Username">
-            </div>
-          </div>
-          
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #7AA2FF;" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
-              <div>
-                <div class="settings-row-title">Personal Access Token</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <div style="position: relative; display: flex; align-items: center;">
-                <input type="password" class="settings-input" id="githubToken" placeholder="ghp_..." style="padding-right: 30px;" aria-label="Personal Access Token">
-                <button class="token-toggle" id="token-toggle-btn" style="position: absolute; right: 8px; font-size: 11px;" aria-label="Show token">👁</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <h2 class="section-title">Repositories</h2>
-        <div class="settings-group">
-          <!-- Leetcode Repo URL -->
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #fab387;" aria-hidden="true">
-                <span>LC</span>
-              </div>
-              <div>
-                <div class="settings-row-title">LeetCode Repo URL</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <input type="text" class="settings-input" id="lcRepoUrl" placeholder="https://github.com/..." aria-label="LeetCode Repository URL">
-            </div>
-          </div>
-          <!-- Leetcode Folder (dropdown) -->
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #fab387;" aria-hidden="true">
-                <span>📁</span>
-              </div>
-              <div>
-                <div class="settings-row-title">LeetCode Folder</div>
-                <div class="settings-row-subtitle">Select from repository</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <select class="settings-input settings-select" id="leetcodeFolder" aria-label="LeetCode Folder">
-                <option value="LeetCode">LeetCode (default)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- GFG Repo URL -->
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #34d399;" aria-hidden="true">
-                <span>GFG</span>
-              </div>
-              <div>
-                <div class="settings-row-title">GFG Repo URL</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <input type="text" class="settings-input" id="gfgRepoUrl" placeholder="https://github.com/..." aria-label="GFG Repository URL">
-            </div>
-          </div>
-          <!-- GFG Folder (dropdown) -->
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #34d399;" aria-hidden="true">
-                <span>📁</span>
-              </div>
-              <div>
-                <div class="settings-row-title">GFG Folder</div>
-                <div class="settings-row-subtitle">Select from repository</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <select class="settings-input settings-select" id="gfgFolder" aria-label="GFG Folder">
-                <option value="GFG">GFG (default)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Scan Folders Button -->
-          <div class="settings-row" style="justify-content: center; border-bottom: none;">
-            <button class="btn-premium btn-compact" id="scan-folders-btn" style="width: 100%; justify-content: center;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              Scan Repository Folders
-            </button>
-          </div>
-        </div>
-
-        <!-- REPO METADATA (shown after verify) -->
-        <div id="repo-metadata-panel" style="display: none;">
-          <h2 class="section-title" style="margin-top: var(--spacing-lg);">Connection Details</h2>
-          <div class="settings-group" id="repo-metadata-content">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-
-        <h2 class="section-title">Repository Sync</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #a6e3a1; color: #1e1e2e;" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
-              </div>
-              <div>
-                <div class="settings-row-title">Restore From Repository</div>
-                <div class="settings-row-subtitle">Rebuild analytics from GitHub</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <button class="btn-premium-sec btn-compact" id="restore-from-repo-btn">Restore</button>
-            </div>
-          </div>
-          <div class="settings-row" style="border-bottom: none;">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #89b4fa; color: #1e1e2e;" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg>
-              </div>
-              <div>
-                <div class="settings-row-title">Save Settings to Repo</div>
-                <div class="settings-row-subtitle">Persist config in .dsa-sync/</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <button class="btn-premium-sec btn-compact" id="save-config-to-repo-btn">Save</button>
-            </div>
-          </div>
-          <div id="sync-status" style="display: none; padding: 8px 12px; font-size: 11px; text-align: center; color: var(--text-secondary);"></div>
-        </div>
-
-        <h2 class="section-title">Appearance</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #cdd6f4; color: #1e1e2e;" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-              </div>
-              <div>
-                <div class="settings-row-title">Theme Mode</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <div class="segmented-control" id="theme-selector" role="radiogroup" aria-label="Theme mode selection">
-                <div class="segmented-option active" data-value="system" role="radio" aria-checked="true" tabindex="0">Auto</div>
-                <div class="segmented-option" data-value="light" role="radio" aria-checked="false" tabindex="-1">Light</div>
-                <div class="segmented-option" data-value="dark" role="radio" aria-checked="false" tabindex="-1">Dark</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <h2 class="section-title">Notifications</h2>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <div class="settings-icon-box" style="background-color: #f9e2af; color: #1e1e2e;" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-              </div>
-              <div>
-                <div class="settings-row-title">Pusher Notifications</div>
-                <div class="settings-row-subtitle">Show alert on successful sync</div>
-              </div>
-            </div>
-            <div class="settings-control-side">
-              <label class="switch">
-                <input type="checkbox" id="notificationToggle" checked aria-label="Enable Pusher Notifications">
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <h2 class="section-title">Danger Zone</h2>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <button class="danger-button" id="clear-history-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-            Clear Activity History
-          </button>
-          
-          <button class="danger-button" id="reset-all-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-            Reset Extension Config
-          </button>
-        </div>
-
-        <button class="btn-premium" id="save-settings-btn" style="margin-top: 10px;">
-          💾 Save Configuration
-        </button>
-        <div id="settings-save-status"></div>
-      </section>
-
-      <!-- 6. ABOUT PAGE -->
-      <section class="page-pane" id="page-pane-about">
-        <div class="glass-card" style="text-align: center; padding: 30px var(--spacing-lg);">
-          <div style="font-size: 48px; margin-bottom: 12px;" aria-hidden="true">⚡</div>
-          <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">LeetGFGHub</h2>
-          <span style="font-size: 11px; color: var(--text-muted); background: var(--border-color); padding: 3px 10px; border-radius: 20px; font-weight: 600;">v2.0.0</span>
-          
-          <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: var(--spacing-xl) 0 var(--spacing-md) 0;">
-            Automatically sync LeetCode and GeeksForGeeks solutions to GitHub.
-          </p>
-        </div>
-
-        <h3 class="section-title">Project Details</h3>
-        <div class="settings-group">
-          <div class="settings-row">
-            <div class="settings-label-side">
-              <span>👤</span>
-              <div class="settings-row-title">Developer</div>
-            </div>
-            <div class="settings-control-side" style="color: var(--text-secondary); font-size: 12px;">
-              Abhinay
-            </div>
-          </div>
-          <a class="settings-row clickable chevron-right" href="https://github.com/abhinay1376/leetgfghub" target="_blank" style="text-decoration: none;">
-            <div class="settings-label-side">
-              <span aria-hidden="true">🐙</span>
-              <div class="settings-row-title">GitHub Repository</div>
-            </div>
-          </a>
-          <a class="settings-row clickable chevron-right" href="https://github.com/abhinay1376/leetgfghub/blob/master/ROADMAP.md" target="_blank" style="text-decoration: none;">
-            <div class="settings-label-side">
-              <span aria-hidden="true">🗺️</span>
-              <div class="settings-row-title">Roadmap</div>
-            </div>
-          </a>
-          <a class="settings-row clickable chevron-right" href="https://github.com/abhinay1376/leetgfghub/blob/master/LICENSE" target="_blank" style="text-decoration: none;">
-            <div class="settings-label-side">
-              <span aria-hidden="true">📜</span>
-              <div class="settings-row-title">License</div>
-            </div>
-            <div class="settings-control-side" style="color: var(--text-secondary); font-size: 12px;">
-              MIT
-            </div>
-          </a>
-        </div>
-
-        <h3 class="section-title">Support</h3>
-        <div class="settings-group">
-          <a class="settings-row clickable chevron-right" href="https://github.com/abhinay1376/leetgfghub/issues/new" target="_blank" style="text-decoration: none;">
-            <div class="settings-label-side">
-              <span aria-hidden="true">🐛</span>
-              <div class="settings-row-title">Report an Issue</div>
-            </div>
-          </a>
-          <a class="settings-row clickable chevron-right" href="https://github.com/abhinay1376/leetgfghub" target="_blank" style="text-decoration: none;">
-            <div class="settings-label-side">
-              <span aria-hidden="true">⭐</span>
-              <div class="settings-row-title">Star Repository</div>
-            </div>
-          </a>
-        </div>
-      </section>
-
-    </div>
-  </main>
-
-  <!-- CODE PREVIEW MODAL OVERLAY -->
-  <div class="modal-overlay" id="code-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-problem-title">
-    <div class="modal-card">
-      <header class="modal-header">
-        <h2 class="modal-title" id="modal-problem-title">Problem Solution</h2>
-        <button class="modal-close" id="modal-close-btn" aria-label="Close modal">&times;</button>
-      </header>
-      <div class="modal-body">
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display: flex; gap: 8px;" id="modal-problem-meta-row">
-          <!-- Populated dynamically -->
-        </div>
-        <pre class="code-container"><code id="modal-code-block"></code></pre>
       </div>
-      <footer class="modal-footer">
-        <button class="btn-premium btn-premium-sec btn-compact" id="modal-copy-btn">Copy Code</button>
-        <button class="btn-premium btn-compact" id="modal-action-btn">Push Solution</button>
-      </footer>
+      <div class="stack stack-2">
+        <button class="btn btn-primary btn-full" id="btn-get-started">Get Started</button>
+        <button class="btn btn-ghost btn-full hidden" id="btn-skip-onboarding">Skip — Already Configured</button>
+      </div>
+    </div>
+
+    <!-- Step 1: Generate Token -->
+    <div class="wizard-step" id="step-1">
+      <div>
+        <div class="text-lg text-bold" style="letter-spacing:-.3px">Connect GitHub</div>
+        <div class="caption mt-1">LeetGFGHub needs a Personal Access Token to push code on your behalf.</div>
+      </div>
+      <div class="step-card stack stack-3">
+        <div class="row row-3">
+          <div style="width:36px;height:36px;border-radius:var(--r);background:var(--green-m);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>
+            <div class="text-semi" style="font-size:13px">Your token is private</div>
+            <div class="caption">Stored only in your browser. Never sent to any server.</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="row row-2">
+          <div class="badge badge-green">✓ repo</div>
+          <div class="caption">Required permission to read &amp; write repositories</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-open-github">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        Generate Token on GitHub
+      </button>
+      <div class="row row-2" style="justify-content:center">
+        <button class="btn btn-ghost btn-sm" id="btn-step1-back">← Back</button>
+        <button class="btn btn-ghost btn-sm" id="btn-step1-next">I have a token →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Instructions -->
+    <div class="wizard-step" id="step-2">
+      <div>
+        <div class="text-lg text-bold" style="letter-spacing:-.3px">Setup Instructions</div>
+        <div class="caption mt-1">Follow these steps on the GitHub page that just opened.</div>
+      </div>
+      <div class="step-card">
+        <div class="instr-item">
+          <div class="instr-num">1</div>
+          <div><div class="text-semi" style="font-size:13px">Note name</div><div class="caption">Enter <code style="background:var(--card-h);padding:1px 5px;border-radius:4px;font-size:11px">LeetGFGHub</code></div></div>
+        </div>
+        <div class="instr-item">
+          <div class="instr-num">2</div>
+          <div><div class="text-semi" style="font-size:13px">Expiration</div><div class="caption">Choose 90 days or No expiration</div></div>
+        </div>
+        <div class="instr-item">
+          <div class="instr-num">3</div>
+          <div><div class="text-semi" style="font-size:13px">Select scope</div><div class="caption">Check <strong>repo</strong> (full repository access)</div></div>
+        </div>
+        <div class="instr-item">
+          <div class="instr-num">4</div>
+          <div><div class="text-semi" style="font-size:13px">Generate &amp; Copy</div><div class="caption">Click Generate token, then copy it</div></div>
+        </div>
+      </div>
+      <div class="row row-2" style="justify-content:center">
+        <button class="btn btn-ghost btn-sm" id="btn-step2-back">← Back</button>
+        <button class="btn btn-primary btn-sm" id="btn-step2-next">Paste Token →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Paste Token -->
+    <div class="wizard-step" id="step-3">
+      <div>
+        <div class="text-lg text-bold" style="letter-spacing:-.3px">Paste Your Token</div>
+        <div class="caption mt-1">The token starts with <code style="background:var(--card-h);padding:1px 5px;border-radius:4px;font-size:11px">ghp_</code></div>
+      </div>
+      <div class="stack stack-3">
+        <div class="token-input-wrap">
+          <input type="password" id="token-input" class="input input-mono" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" aria-label="GitHub Personal Access Token" autocomplete="off" spellcheck="false">
+          <button class="token-eye" id="btn-token-eye" aria-label="Show/hide token" title="Show token">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <button class="btn btn-ghost btn-full btn-sm" id="btn-paste-clipboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+          Paste from Clipboard
+        </button>
+        <div id="verify-state" class="hidden"></div>
+        <div id="profile-mini-wrap" class="hidden">
+          <div class="profile-mini">
+            <img id="verify-avatar" class="avatar" src="" alt="Avatar">
+            <div class="flex-1">
+              <div id="verify-name" class="text-semi" style="font-size:13px"></div>
+              <div id="verify-login" class="caption"></div>
+            </div>
+            <div class="badge badge-green">✓</div>
+          </div>
+        </div>
+      </div>
+      <div class="stack stack-2">
+        <button class="btn btn-primary btn-full" id="btn-verify-token">Verify Connection</button>
+        <button class="btn btn-ghost btn-full btn-sm" id="btn-step3-back">← Back</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Repository -->
+    <div class="wizard-step" id="step-4">
+      <div>
+        <div class="text-lg text-bold" style="letter-spacing:-.3px">Choose Repository</div>
+        <div class="caption mt-1">Select where your solutions will be pushed.</div>
+      </div>
+      <div class="stack stack-2">
+        <div class="input-wrap picker-search">
+          <span class="icon-left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input type="text" id="repo-search" class="input input-search" placeholder="Search repositories..." aria-label="Search repositories">
+        </div>
+        <div class="picker-list" id="repo-list">
+          <div class="picker-empty"><div class="spinner" style="margin:0 auto 8px"></div>Loading repositories…</div>
+        </div>
+      </div>
+      <div class="row row-2" style="justify-content:center">
+        <button class="btn btn-ghost btn-sm" id="btn-step4-back">← Back</button>
+        <button class="btn btn-primary btn-sm" id="btn-step4-next" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: LC Folder -->
+    <div class="wizard-step" id="step-5">
+      <div>
+        <div class="text-lg text-bold" style="letter-spacing:-.3px">LeetCode Folder</div>
+        <div class="caption mt-1">Where should LeetCode solutions be stored?</div>
+      </div>
+      <div class="stack stack-2">
+        <div class="picker-list" id="lc-folder-list">
+          <div class="picker-empty"><div class="spinner" style="margin:0 auto 8px"></div>Loading folders…</div>
+        </div>
+        <div id="lc-new-folder-row" class="new-folder-row hidden">
+          <input type="text" id="lc-new-folder-input" class="input flex-1" placeholder="e.g. LeetCode" aria-label="New LeetCode folder name">
+          <button class="btn btn-ghost btn-sm" id="btn-lc-create-folder">Create</button>
+        </div>
+        <button class="btn btn-ghost btn-full btn-sm" id="btn-lc-new-folder">+ Create new folder</button>
+      </div>
+      <div class="row row-2" style="justify-content:center">
+        <button class="btn btn-ghost btn-sm" id="btn-step5-back">← Back</button>
+        <button class="btn btn-primary btn-sm" id="btn-step5-next" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 6: GFG Folder -->
+    <div class="wizard-step" id="step-6">
+      <div>
+        <div class="text-lg text-bold" style="letter-spacing:-.3px">GFG Folder</div>
+        <div class="caption mt-1">Where should GeeksForGeeks solutions be stored?</div>
+      </div>
+      <div class="stack stack-2">
+        <div class="picker-list" id="gfg-folder-list">
+          <div class="picker-empty"><div class="spinner" style="margin:0 auto 8px"></div>Loading folders…</div>
+        </div>
+        <div id="gfg-new-folder-row" class="new-folder-row hidden">
+          <input type="text" id="gfg-new-folder-input" class="input flex-1" placeholder="e.g. GFG" aria-label="New GFG folder name">
+          <button class="btn btn-ghost btn-sm" id="btn-gfg-create-folder">Create</button>
+        </div>
+        <button class="btn btn-ghost btn-full btn-sm" id="btn-gfg-new-folder">+ Create new folder</button>
+      </div>
+      <div class="row row-2" style="justify-content:center">
+        <button class="btn btn-ghost btn-sm" id="btn-step6-back">← Back</button>
+        <button class="btn btn-primary btn-sm" id="btn-step6-next" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 7: All Set -->
+    <div class="wizard-step" id="step-7">
+      <div class="text-center stack stack-3">
+        <div style="display:flex;justify-content:center">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--green-m);border:1px solid rgba(52,199,89,.3);display:flex;align-items:center;justify-content:center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" style="stroke-dasharray:50;stroke-dashoffset:50;animation:checkDraw .5s var(--ease) .1s forwards"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-lg text-bold text-green">All Set!</div>
+          <div class="caption mt-1">Your workspace is ready.</div>
+        </div>
+      </div>
+      <div class="step-card stack stack-2" id="setup-summary"></div>
+      <button class="btn btn-primary btn-full" id="btn-start-syncing">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12 12 5 19 12"/><polyline points="5 19 12 12 19 19"/></svg>
+        Start Syncing
+      </button>
     </div>
   </div>
+</div>
 
-  <!-- WELCOME / FIRST RUN OVERLAY -->
-  <div class="modal-overlay" id="welcome-overlay" style="display: none; align-items: center; justify-content: center; z-index: 2000; background: var(--bg-blur);">
-    <div class="glass-card" style="max-width: 320px; width: 100%; padding: 30px var(--spacing-xl); text-align: center; border: 1px solid var(--border-color); box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
-      <div style="font-size: 48px; margin-bottom: 16px;" aria-hidden="true">👋</div>
-      <h2 style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Welcome to LeetGFGHub</h2>
-      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px;">
-        Automatically sync your accepted LeetCode and GeeksForGeeks solutions directly to GitHub, build your portfolio, and track your coding streak!
-      </p>
-      <div style="text-align: left; margin-bottom: 24px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <span style="color: var(--success); font-size: 14px;">✓</span>
-          <span style="font-size: 12px; color: var(--text-primary);">Automated GitHub Sync</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <span style="color: var(--success); font-size: 14px;">✓</span>
-          <span style="font-size: 12px; color: var(--text-primary);">Rich Analytics Dashboard</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="color: var(--success); font-size: 14px;">✓</span>
-          <span style="font-size: 12px; color: var(--text-primary);">Secure & Private</span>
-        </div>
-      </div>
-      <button class="btn-premium" id="welcome-start-btn" style="width: 100%; justify-content: center; padding: 12px;">
-        Connect Repository
+<!-- ═══════════════════════════════════════════ MAIN APP ══ -->
+<div id="screen-main" class="screen">
+  <!-- Header -->
+  <div class="page-header">
+    <span class="page-title" id="page-title">Dashboard</span>
+    <div class="row row-2">
+      <button class="btn btn-ghost btn-icon" id="btn-sync-now" title="Sync from GitHub" aria-label="Sync from GitHub">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       </button>
     </div>
   </div>
 
-  <script src="popup.js"></script>
+
+  <!-- main body: pages + right nav -->
+  <div class="main-body">
+    <!-- Pages -->
+    <div class="pages">
+      <!-- Dashboard -->
+      <div class="page active" id="page-dashboard" role="main" aria-label="Dashboard">
+        <div id="dashboard-content" class="stack stack-3 pb-4" style="padding-bottom:16px">
+          <div class="stat-grid" id="streak-grid">
+            <div class="skeleton" style="height:80px;border-radius:var(--rl)"></div>
+            <div class="skeleton" style="height:80px;border-radius:var(--rl)"></div>
+            <div class="skeleton stat-wide" style="height:80px;border-radius:var(--rl)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="page" id="page-history" role="main" aria-label="History">
+        <div class="input-wrap mb-3">
+          <span class="icon-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          <input type="text" id="history-search" class="input input-search" placeholder="Search history…" aria-label="Search history">
+        </div>
+        <div id="history-list" class="stack"></div>
+      </div>
+
+      <!-- Projects -->
+      <div class="page" id="page-projects" role="main" aria-label="Projects">
+        <div id="projects-content"></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="page" id="page-settings" role="main" aria-label="Settings">
+        <div id="settings-content"></div>
+      </div>
+    </div>
+
+    <!-- Right-side Nav -->
+    <nav id="bottom-nav" aria-label="Main navigation">
+      <!-- brand dot -->
+      <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#1c2a1c,#0d1a0d);border:1px solid rgba(52,199,89,.25);display:flex;align-items:center;justify-content:center;margin-bottom:8px;flex-shrink:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      </div>
+      <button class="nav-item active" data-page="dashboard" aria-label="Dashboard" aria-current="page">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-page="history" aria-label="History">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>History</span>
+      </button>
+      <button class="nav-item" data-page="projects" aria-label="Projects">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Repos</span>
+      </button>
+      <button class="nav-item" data-page="settings" aria-label="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+</div><!-- /#app -->
+<script src="popup.js" type="module"></script>
 </body>
 </html>

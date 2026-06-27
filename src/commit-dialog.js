@@ -105,25 +105,29 @@ window.showCommitDialog = async function(meta) {
   const overlay = document.createElement("div");
   overlay.id = "dsa-pusher-overlay";
   overlay.style.cssText = [
-    "position:fixed", "inset:0", "background:rgba(0, 0, 0, 0.4)",
-    "z-index:2147483647", "display:flex", "align-items:center",
-    "justify-content:center", "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
-    "backdrop-filter:blur(24px) saturate(150%)", "-webkit-backdrop-filter:blur(24px) saturate(150%)",
-    "animation: dsaFadeIn 0.3s ease-out forwards"
+    "position:fixed", "inset:0", "background:rgba(0, 0, 0, 0.35)",
+    "z-index:2147483647",
+    "display:flex", "align-items:flex-end", "justify-content:flex-end",
+    "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
+    "backdrop-filter:blur(20px) saturate(160%)", "-webkit-backdrop-filter:blur(20px) saturate(160%)",
+    "animation: dsaFadeIn 0.25s ease-out forwards"
   ].join(";");
 
   overlay.innerHTML = `
     <div id="dsa-pusher-card" style="
-      background: rgba(30, 30, 32, 0.65);
+      background: rgba(28, 28, 30, 0.82);
       color: #F5F5F7;
-      border-radius: 24px;
+      border-radius: 24px 24px 0 24px;
       padding: 32px;
-      width: 440px;
-      max-width: 92vw;
-      box-shadow: 0 24px 48px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15), 0 0 0 1px rgba(255,255,255,0.08);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      animation: dsaSpringUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      width: 420px;
+      max-width: calc(100vw - 24px);
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      margin: 0 16px 16px 0;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.4), 0 24px 48px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.08);
+      backdrop-filter: blur(48px) saturate(180%);
+      -webkit-backdrop-filter: blur(48px) saturate(180%);
+      animation: dsaSlideInRight 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -131,9 +135,9 @@ window.showCommitDialog = async function(meta) {
     ">
       <style>
         @keyframes dsaFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes dsaSpringUp {
-          0% { opacity: 0; transform: scale(0.92) translateY(20px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes dsaSlideInRight {
+          0%   { opacity: 0; transform: translateX(60px) scale(0.96); }
+          100% { opacity: 1; transform: translateX(0)   scale(1); }
         }
         @keyframes dsaCheckDraw { to { stroke-dashoffset: 0; } }
         
@@ -290,15 +294,13 @@ window.showCommitDialog = async function(meta) {
 
   // ── Cancel ────────────────────────────────────────────────────────────────
   document.getElementById("dsa-cancel-btn").onclick = () => {
-    overlay.style.animation = "dsaFadeIn 0.2s ease-in reverse forwards";
-    setTimeout(() => overlay.remove(), 200);
+    _dismissOverlay(overlay);
   };
 
   // ── Save for Later ────────────────────────────────────────────────────────
   document.getElementById("dsa-skip-btn").onclick = async () => {
     await storePending(meta);
-    overlay.style.animation = "dsaFadeIn 0.2s ease-in reverse forwards";
-    setTimeout(() => overlay.remove(), 200);
+    _dismissOverlay(overlay);
   };
 
   // ── Push ──────────────────────────────────────────────────────────────────
@@ -349,10 +351,7 @@ window.showCommitDialog = async function(meta) {
         const card = document.getElementById("dsa-pusher-card");
         card.style.transform = "scale(1.02)";
         card.style.boxShadow = "0 24px 48px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15), 0 0 0 1px rgba(52, 199, 89, 0.4)";
-        setTimeout(() => {
-          overlay.style.animation = "dsaFadeIn 0.3s ease-in reverse forwards";
-          setTimeout(() => overlay.remove(), 300);
-        }, 2000);
+        setTimeout(() => _dismissOverlay(overlay), 2000);
       } else {
         setStatus(statusEl, response?.error || "Push failed.", "#FF453A");
         btn.innerHTML = "Push to GitHub";
@@ -369,11 +368,22 @@ window.showCommitDialog = async function(meta) {
   overlay.addEventListener("click", e => {
     const btn = document.getElementById("dsa-push-btn");
     if (e.target === overlay && !btn.disabled) {
-      overlay.style.animation = "dsaFadeIn 0.2s ease-in reverse forwards";
-      setTimeout(() => overlay.remove(), 200);
+      _dismissOverlay(overlay);
     }
   });
 };
+
+function _dismissOverlay(overlay) {
+  const card = overlay.querySelector('#dsa-pusher-card');
+  if (card) {
+    card.style.transition = "transform 0.25s cubic-bezier(0.4, 0, 1, 1), opacity 0.25s ease";
+    card.style.transform  = "translateX(80px) scale(0.96)";
+    card.style.opacity    = "0";
+  }
+  overlay.style.transition = "opacity 0.25s ease";
+  overlay.style.opacity    = "0";
+  setTimeout(() => overlay.remove(), 260);
+}
 
 function setStatus(el, msg, color) {
   el.textContent = msg;
