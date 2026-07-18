@@ -225,6 +225,7 @@ function showMain() {
   $("screen-onboarding").classList.remove("active");
   $("screen-main").classList.add("active");
   loadDashboard(); loadHistory(); renderProjects(); renderSettings();
+  _updatePracticeBadge();
 }
 
 // Nav
@@ -366,9 +367,25 @@ async function renderProjects() {
 // ── Settings ──────────────────────────────────────────────────────────────
 async function renderSettings() {
   const cfg = await chrome.storage.sync.get(["githubUser","githubToken","lcRepoUrl","selectedRepo","theme","onboarded"]);
+  const pmData = await chrome.storage.local.get(["practiceMode"]);
+  const practiceOn = pmData.practiceMode === true;
   const user = cfg.githubUser || {};
   const repo = cfg.selectedRepo || {};
   $("settings-content").innerHTML = `
+    <div class="settings-section">
+      <div class="settings-section-title">Practice Mode</div>
+      <div class="settings-row row-between">
+        <div class="settings-row-left">
+          <div class="settings-row-lbl">🎯 Practice Mode</div>
+          <div class="settings-row-val" style="font-size:11px;color:var(--txt3)">Skip GitHub sync for contests &amp; assessments</div>
+        </div>
+        <label class="toggle-switch" style="flex-shrink:0">
+          <input type="checkbox" id="practice-toggle" ${practiceOn ? "checked" : ""}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      ${practiceOn ? '<div class="badge badge-orange" style="margin-top:4px;font-size:11px">🟡 Practice Mode Active — GitHub sync disabled</div>' : ''}
+    </div>
     <div class="settings-section">
       <div class="settings-section-title">GitHub Account</div>
       <div class="card row row-3" style="margin-bottom:4px">
@@ -401,6 +418,20 @@ async function renderSettings() {
         <button class="btn btn-danger btn-full" id="btn-disconnect">Disconnect</button>
       </div>
     </div>`;
+
+  // Practice Mode toggle
+  $("practice-toggle").onchange = async (e) => {
+    if (!e.target.checked) {
+      // Disabling — show safety confirmation
+      const ok = confirm("Resume GitHub Sync?\n\nFuture accepted submissions will now be uploaded to GitHub.");
+      if (!ok) { e.target.checked = true; return; }
+    }
+    await chrome.storage.local.set({ practiceMode: e.target.checked });
+    toast(e.target.checked ? "🎯 Practice Mode enabled" : "✅ GitHub sync resumed");
+    renderSettings();
+    _updatePracticeBadge();
+  };
+
   $("theme-select").onchange = async e => {
     const { initTheme } = await import("./src/theme-service.js");
     initTheme(e.target.value);
@@ -414,6 +445,30 @@ async function renderSettings() {
     await chrome.storage.local.remove(["_obStep"]);
     showOnboarding(0);
   };
+}
+
+// Practice Mode badge on dashboard header
+async function _updatePracticeBadge() {
+  const pmData = await chrome.storage.local.get(["practiceMode"]);
+  const existing = document.getElementById("pm-badge");
+  if (existing) existing.remove();
+  if (pmData.practiceMode === true) {
+    const badge = document.createElement("span");
+    badge.id = "pm-badge";
+    badge.className = "badge badge-orange";
+    badge.style.cssText = "font-size:10px;margin-left:8px;cursor:pointer";
+    badge.textContent = "🟡 Practice";
+    badge.title = "Practice Mode is ON — click to go to Settings";
+    badge.onclick = () => {
+      document.querySelectorAll(".nav-item").forEach(b => { b.classList.remove("active"); b.removeAttribute("aria-current"); });
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      document.querySelector('[data-page="settings"]').classList.add("active");
+      document.querySelector('[data-page="settings"]').setAttribute("aria-current", "page");
+      $("page-settings").classList.add("active");
+      $("page-title").textContent = "Settings";
+    };
+    $("page-title")?.after(badge);
+  }
 }
 
 // ── Sync button ───────────────────────────────────────────────────────────

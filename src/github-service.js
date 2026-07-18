@@ -199,6 +199,7 @@ export class GitHubService {
   /**
    * Create or update a file safely.
    * Always fetches the latest SHA before writing — never uses a cached value.
+   * On SHA conflict (409/422), retries once with a freshly-fetched SHA.
    * @param {string} owner
    * @param {string} repo
    * @param {string} path
@@ -207,22 +208,37 @@ export class GitHubService {
    * @returns {Promise<{commit: {sha: string}, content: {sha: string}, created: boolean}>}
    */
   async createOrUpdateFile(owner, repo, path, content, message) {
-    // Always fetch fresh SHA — never rely on a previously stored value
-    const existing = await this.getFile(owner, repo, path);
-    const url = `${this._base}/repos/${owner}/${repo}/contents/${path}`;
+    const MAX_RETRIES = 2;
 
-    const body = {
-      message,
-      content: _toBase64(content),
-    };
-    if (existing) body.sha = existing.sha;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Always fetch fresh SHA — never rely on a previously stored value
+      const existing = await this.getFile(owner, repo, path);
+      const url = `${this._base}/repos/${owner}/${repo}/contents/${path}`;
 
-    const result = await this._fetch(url, {
-      method: "PUT",
-      body:   JSON.stringify(body),
-    });
+      const body = {
+        message,
+        content: _toBase64(content),
+      };
+      if (existing) body.sha = existing.sha;
 
-    return { ...result, created: !existing };
+      try {
+        const result = await this._fetch(url, {
+          method: "PUT",
+          body:   JSON.stringify(body),
+        });
+        return { ...result, created: !existing };
+      } catch (err) {
+        // Retry on SHA conflict — the file was modified between our GET and PUT
+        const isShaConflict = err.code === GH_ERROR_CODES.SHA_MISMATCH ||
+                              err.status === 409 || err.status === 422;
+        if (isShaConflict && attempt < MAX_RETRIES - 1) {
+          // Brief pause before retry to let GitHub's eventually-consistent storage settle
+          await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+        throw err;
+      }
+    }
   }
   /**
    * List top-level directories in a repository.

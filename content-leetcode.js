@@ -5,14 +5,16 @@
  * Runs at document_idle on https://leetcode.com/problems/*
  *
  * Trigger contract:
- *   - ONLY fires when a NEW submission result transitions to "Accepted"
- *   - Never fires when viewing history, refreshing, or on WA/TLE
+ *   - ONLY fires when a NEW submission transitions to "Accepted"
+ *   - Never fires when viewing history, refreshing, old submissions, or on WA/TLE
+ *   - Requires proof of active submission (pending state / submit click / SPA nav)
  *   - Deduplicates using submissionId stored in sessionStorage
  */
 (() => {
-  let lastUrl        = location.href;
-  let pushed         = false;
-  let debounce       = null;
+  let lastUrl            = location.href;
+  let pushed             = false;
+  let debounce           = null;
+  let seenPendingState   = false;  // Proves this is a live submission, not historical
 
   // ── Submission ID extraction ──────────────────────────────────────────────
   // LeetCode URLs for a submission result look like:
@@ -67,34 +69,113 @@
   // ── Problem metadata extraction ───────────────────────────────────────────
 
   function getProblemNumber() {
+    // Strategy 1: Title element with "123. Title" format (works on problem pages)
     const titleEl =
       document.querySelector('[data-cy="question-title"]') ||
-      document.querySelector('.mr-2.text-label-1') ||
-      document.querySelector('h1');
+      document.querySelector('.mr-2.text-label-1');
     if (titleEl) {
       const m = titleEl.innerText?.trim().match(/^(\d+)\./);
       if (m) return parseInt(m[1]);
     }
 
+    // Strategy 2: __NEXT_DATA__ JSON — try multiple known paths
+    // LeetCode embeds problem data in different locations depending on the page type
     try {
       const ndScript = document.getElementById("__NEXT_DATA__");
       if (ndScript) {
         const nd = JSON.parse(ndScript.textContent);
-        const question =
-          nd?.props?.pageProps?.dehydratedState?.queries?.[0]?.state?.data?.question ||
-          nd?.props?.pageProps?.question;
-        if (question?.questionFrontendId) return parseInt(question.questionFrontendId);
+        // Path A: Direct question data (problem page)
+        const q1 = nd?.props?.pageProps?.dehydratedState?.queries?.[0]?.state?.data?.question;
+        if (q1?.questionFrontendId) return parseInt(q1.questionFrontendId);
+        // Path B: Alternative question structure
+        const q2 = nd?.props?.pageProps?.question;
+        if (q2?.questionFrontendId) return parseInt(q2.questionFrontendId);
+        // Path C: Search all dehydrated queries (submission pages store data in different indices)
+        const queries = nd?.props?.pageProps?.dehydratedState?.queries;
+        if (Array.isArray(queries)) {
+          for (const q of queries) {
+            const fid = q?.state?.data?.question?.questionFrontendId ||
+                        q?.state?.data?.submissionDetails?.question?.questionFrontendId;
+            if (fid) return parseInt(fid);
+          }
+        }
       }
     } catch (_) {}
 
-    const pageMatch = document.title.match(/^(\d+)\./);
-    if (pageMatch) return parseInt(pageMatch[1]);
+    // Strategy 3: document.title — "123. Two Sum - LeetCode" or "Two Sum - LeetCode"
+    const titleMatch = document.title.match(/^(\d+)\.\s/);
+    if (titleMatch) return parseInt(titleMatch[1]);
 
-    const slug = location.pathname.split("/problems/")[1]?.replace(/\/$/, "").split("/")[0] || "";
-    const slugMatch = slug.match(/^(\d+)/);
-    if (slugMatch) return parseInt(slugMatch[1]);
+    // Strategy 4: Meta tags — og:title or description may include the number
+    try {
+      const ogTitle = document.querySelector('meta[property="og:title"]')?.content || "";
+      const ogMatch = ogTitle.match(/^(\d+)\.\s/);
+      if (ogMatch) return parseInt(ogMatch[1]);
+    } catch (_) {}
+
+    // Strategy 5: Breadcrumb / nav links that reference the problem
+    for (const a of document.querySelectorAll('a[href*="/problems/"]')) {
+      const text = a.innerText?.trim();
+      const m = text?.match(/^(\d+)\.\s/);
+      if (m) return parseInt(m[1]);
+    }
+
+    // Strategy 6: Any visible element on the page with "N. Title" pattern
+    // (catches custom LeetCode layouts)
+    for (const el of document.querySelectorAll('h1, h2, h3, [class*="title"]')) {
+      const m = el.innerText?.trim().match(/^(\d+)\.\s/);
+      if (m) return parseInt(m[1]);
+    }
 
     return null;
+  }
+
+  /**
+   * Async fallback: extract problem number via injected script that can read
+   * LeetCode's client-side JS context (React cache, GraphQL store, etc.)
+   * @returns {Promise<number|null>}
+   */
+  function getProblemNumberAsync() {
+    return new Promise((resolve) => {
+      const eventId = "lc-num-" + Date.now() + Math.random().toString(36).substring(2);
+      const script = document.createElement("script");
+      script.textContent = `(function() {
+        var num = null;
+        try {
+          // Read from React's internal cache or __NEXT_DATA__
+          var nd = window.__NEXT_DATA__;
+          if (nd) {
+            var queries = nd.props && nd.props.pageProps && nd.props.pageProps.dehydratedState && nd.props.pageProps.dehydratedState.queries;
+            if (queries) {
+              for (var i = 0; i < queries.length; i++) {
+                var q = queries[i];
+                var fid = (q.state && q.state.data && q.state.data.question && q.state.data.question.questionFrontendId) ||
+                          (q.state && q.state.data && q.state.data.submissionDetails && q.state.data.submissionDetails.question && q.state.data.submissionDetails.question.questionFrontendId);
+                if (fid) { num = parseInt(fid); break; }
+              }
+            }
+          }
+        } catch(e) {}
+        window.postMessage({ type: 'DSA_PROBLEM_NUM', eventId: '${eventId}', num: num }, '*');
+      })();`;
+
+      const listener = (event) => {
+        if (event.data?.type === "DSA_PROBLEM_NUM" && event.data.eventId === eventId) {
+          window.removeEventListener("message", listener);
+          if (script.parentNode) script.remove();
+          resolve(event.data.num || null);
+        }
+      };
+      window.addEventListener("message", listener);
+      (document.head || document.documentElement).appendChild(script);
+
+      // Safety timeout
+      setTimeout(() => {
+        window.removeEventListener("message", listener);
+        if (script.parentNode) script.remove();
+        resolve(null);
+      }, 1500);
+    });
   }
 
   function getProblemMeta() {
@@ -136,12 +217,30 @@
    * Returns true ONLY if the current submission result element shows "Accepted".
    * Uses the most stable selector first (data-e2e-locator).
    * Does NOT rely on body text scan to avoid catching old accepted banners.
+   *
+   * Also rejects transient states: Running, Pending, Compiling, Judging —
+   * LeetCode briefly flashes result elements during evaluation.
    */
   function isAccepted() {
-    // Primary: submission result data attribute (stable across LC redesigns)
+    // Guard: reject transient/pending states BEFORE checking for "Accepted"
     const resultEl = document.querySelector('[data-e2e-locator="submission-result"]');
     if (resultEl) {
-      return resultEl.innerText.trim().toLowerCase() === "accepted";
+      const text = resultEl.innerText.trim().toLowerCase();
+      // Reject all non-final states
+      if (text === "running" || text === "pending" || text === "compiling" ||
+          text === "judging" || text === "" || text === "submitting") {
+        return false;
+      }
+      return text === "accepted";
+    }
+
+    // Guard: reject if any pending/running indicator is visible on the page
+    const pendingIndicators = document.querySelectorAll(
+      '[class*="pending"], [class*="running"], [data-e2e-locator="submission-result-loading"]'
+    );
+    for (const el of pendingIndicators) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) return false;
     }
 
     // Fallback: green badge with exact text "Accepted" that is visibly rendered
@@ -283,6 +382,47 @@
     return langMap[raw] || "java";
   }
 
+  // ── Pending state detection ───────────────────────────────────────────────
+  // Differentiates a LIVE submission (Running → Accepted) from a HISTORICAL
+  // page (loads with Accepted already rendered).
+
+  function isPendingState() {
+    const resultEl = document.querySelector('[data-e2e-locator="submission-result"]');
+    if (resultEl) {
+      const text = resultEl.innerText.trim().toLowerCase();
+      if (["running", "pending", "compiling", "judging", "submitting"].includes(text)) {
+        return true;
+      }
+    }
+    const loadingEls = document.querySelectorAll(
+      '[data-e2e-locator="submission-result-loading"], [class*="animate-spin"]'
+    );
+    for (const el of loadingEls) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) return true;
+    }
+    return false;
+  }
+
+  // ── Submit action detection ───────────────────────────────────────────────
+  // Detect when the user actively submits code (click or keyboard shortcut).
+
+  document.addEventListener('click', (e) => {
+    const stableBtn = e.target.closest('[data-e2e-locator="console-submit-button"]');
+    if (stableBtn) { seenPendingState = true; return; }
+    const btn = e.target.closest('button');
+    if (btn && !btn.closest('#dsa-pusher-overlay')) {
+      const text = btn.textContent.trim().toLowerCase();
+      if (text === 'submit' || text === 'submit code') seenPendingState = true;
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && location.pathname.includes('/problems/')) {
+      seenPendingState = true;
+    }
+  }, true);
+
   // ── MutationObserver ──────────────────────────────────────────────────────
 
   const observer = new MutationObserver(() => {
@@ -290,53 +430,88 @@
 
     // Reset state on every SPA navigation
     if (currentUrl !== lastUrl) {
+      // Detect SPA navigation from problem editor → submission result.
+      // This pattern only happens during a live submission.
+      const wasOnEditor = !/\/submissions\/\d+\/?$/.test(new URL(lastUrl, location.origin).pathname);
+      const isNowOnResult = /\/problems\/[^/]+\/submissions\/\d+\/?$/.test(location.pathname);
+
       lastUrl  = currentUrl;
       pushed   = false;
       clearTimeout(debounce);
       debounce = null;
+
+      if (wasOnEditor && isNowOnResult) {
+        seenPendingState = true;   // Editor → result = live submission
+      } else {
+        seenPendingState = false;  // Any other navigation = reset
+      }
     }
 
-    // Gate 1: must be on a specific submission result page (has numeric ID in URL)
+    // Gate 1: must be on a specific submission result page
     if (!isSubmissionResultPage()) return;
 
-    // Gate 2: this submission must not have been processed already
+    // Track pending states — if we see Running/Pending/Compiling, this is live
+    if (isPendingState()) seenPendingState = true;
+
+    // Gate 2: must have proof this is a live submission (not historical)
+    if (!seenPendingState) return;
+
+    // Gate 3: this submission must not have been processed already
     const submissionId = getSubmissionIdFromUrl();
     if (isAlreadyProcessed(submissionId)) return;
 
-    // Gate 3: must not have already triggered for this URL visit
+    // Gate 4: must not have already triggered for this URL visit
     if (pushed) return;
 
-    // Gate 4: result must ALREADY show "Accepted" in the DOM
-    // (avoids triggering during the "Running..." transient state)
+    // Gate 5: result must show "Accepted"
     if (!isAccepted()) return;
 
-    // Schedule a deferred verification — the result banner can briefly appear
-    // before the final verdict is set. We wait, then re-check before committing.
-    pushed = true; // Prevent duplicate schedules
+    pushed = true;
 
     clearTimeout(debounce);
     debounce = setTimeout(async () => {
-      // Re-verify acceptance after the DOM has had time to fully settle.
-      // This prevents false positives when LeetCode briefly flashes "Accepted"
-      // during result evaluation before the true verdict is shown.
       if (!isAccepted()) {
-        pushed = false; // Reset so we can trigger again when real result arrives
+        pushed = false;
         return;
       }
 
-      // Only mark as fully processed now that we've confirmed the verdict
-      markProcessed(submissionId);
-
       const meta = getProblemMeta();
+
+      // If synchronous extraction missed the number, try the async injected-script fallback
+      if (!meta.number) {
+        meta.number = await getProblemNumberAsync();
+      }
+
       const code = await getCodeFromPageContext();
       if (code && code.trim().length > 0) {
+        markProcessed(submissionId);
+
+        // Practice Mode gate — skip GitHub sync, show notification instead
+        try {
+          const pmData = await chrome.storage.local.get(["practiceMode"]);
+          if (pmData.practiceMode === true) {
+            _showPracticeModeNotice();
+            return;
+          }
+        } catch (_) {}
+
         showCommitDialog({ ...meta, platform: "leetcode", code, language: getLanguage() });
       } else {
-        // Code extraction failed — reset so we can retry on next mutation
         pushed = false;
       }
-    }, 2500); // 2.5s — enough time for submission result page to fully render
+    }, 2500);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // ── Practice Mode notification ────────────────────────────────────────────
+  function _showPracticeModeNotice() {
+    if (document.getElementById("dsa-practice-notify")) return;
+    const el = document.createElement("div");
+    el.id = "dsa-practice-notify";
+    el.style.cssText = "position:fixed;bottom:24px;right:24px;background:rgba(28,28,30,0.92);color:#F5F5F7;border-radius:16px;padding:16px 20px;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;font-size:13px;z-index:2147483646;box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:12px;max-width:340px;animation:dsaPNIn .4s cubic-bezier(.16,1,.3,1) forwards";
+    el.innerHTML = '<style>@keyframes dsaPNIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}</style><div style="width:36px;height:36px;border-radius:10px;background:rgba(255,214,10,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(255,214,10,0.3)"><span style="font-size:18px">🎯</span></div><div><div style="font-weight:600;color:#FFD60A;margin-bottom:2px">Practice Mode</div><div style="color:#AEAEB2;font-size:12px;line-height:1.4">Solution detected. GitHub sync skipped.</div></div>';
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.transition = "opacity .3s,transform .3s"; el.style.opacity = "0"; el.style.transform = "translateY(10px)"; setTimeout(() => el.remove(), 350); }, 4000);
+  }
 })();

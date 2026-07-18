@@ -9,15 +9,16 @@
 // ── Path helpers (mirrored from utils.js to avoid import) ──────────────────
 
 function _lcFolderName(number, slug) {
-  const padded = String(number || 0).padStart(4, "0");
-  // Convert kebab-case slug to Title_Case: "koko-eating-bananas" → "Koko_Eating_Bananas"
   const clean = (slug || "unknown")
     .split(/[-_]+/)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join("_")
     .replace(/[^a-zA-Z0-9_]/g, "")
     .replace(/^_|_$/g, "");
-  return padded + "_" + clean;
+  if (number && Number(number) > 0) {
+    return String(number).padStart(4, "0") + "_" + clean;
+  }
+  return clean;
 }
 
 function _gfgFolderName(title, slug) {
@@ -141,6 +142,9 @@ window.showCommitDialog = async function(meta) {
         }
         @keyframes dsaCheckDraw { to { stroke-dashoffset: 0; } }
         
+        .dsa-rev-field { margin-bottom: 10px; }
+        .dsa-field-err { font-size: 11px; color: #FF453A; margin-top: 4px; min-height: 14px; }
+        
         #dsa-pusher-card * { box-sizing: border-box; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif; }
         
         /* Premium inputs */
@@ -242,6 +246,47 @@ window.showCommitDialog = async function(meta) {
         </div>
       </div>
 
+      <!-- CODE PREVIEW -->
+      <div>
+        <span class="dsa-label">Code Preview</span>
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px; max-height: 160px; overflow-y: auto; font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 1.5; color: #AEAEB2; white-space: pre-wrap; word-break: break-all;" id="dsa-code-preview">${_escapeHtml(meta.code?.substring(0, 2000) || '')}</div>
+      </div>
+
+      <!-- REVISION NOTES (Mandatory) -->
+      <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:14px">📝</span>
+          <span style="font-size:13px;font-weight:600;color:#F5F5F7">Revision Notes</span>
+          <span style="font-size:10px;color:#FF9F0A;font-weight:500;background:rgba(255,159,10,0.15);padding:2px 8px;border-radius:100px">Required</span>
+        </div>
+
+        <div class="dsa-rev-field">
+          <span class="dsa-label">Intuition</span>
+          <textarea id="dsa-rev-intuition" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="How did you arrive at this approach? What pattern did you recognize?"></textarea>
+          <div class="dsa-field-err" id="dsa-err-intuition"></div>
+        </div>
+        <div class="dsa-rev-field">
+          <span class="dsa-label">Lines / Logic To Be Careful With</span>
+          <textarea id="dsa-rev-careful" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Tricky conditions, off-by-one, overflow, pointer movement, etc."></textarea>
+          <div class="dsa-field-err" id="dsa-err-careful"></div>
+        </div>
+        <div class="dsa-rev-field">
+          <span class="dsa-label">Edge Cases Handled</span>
+          <textarea id="dsa-rev-edgeCases" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Empty input, single element, duplicates, negative numbers, etc."></textarea>
+          <div class="dsa-field-err" id="dsa-err-edgeCases"></div>
+        </div>
+        <div class="dsa-rev-field">
+          <span class="dsa-label">Mistakes I Made</span>
+          <textarea id="dsa-rev-mistakes" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Wrong base case, forgot to sort, incorrect boundary, etc."></textarea>
+          <div class="dsa-field-err" id="dsa-err-mistakes"></div>
+        </div>
+        <div class="dsa-rev-field">
+          <span class="dsa-label">Future Reminder</span>
+          <textarea id="dsa-rev-futureReminder" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="What should your future self remember when revising this?"></textarea>
+          <div class="dsa-field-err" id="dsa-err-futureReminder"></div>
+        </div>
+      </div>
+
       <!-- COMMIT INPUT -->
       <div>
         <span class="dsa-label">Commit Message</span>
@@ -269,7 +314,7 @@ window.showCommitDialog = async function(meta) {
 
       <!-- ACTIONS -->
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
-        <button id="dsa-push-btn" class="dsa-btn dsa-btn-primary">
+        <button id="dsa-push-btn" class="dsa-btn dsa-btn-primary" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           Push to GitHub
         </button>
@@ -285,6 +330,36 @@ window.showCommitDialog = async function(meta) {
   `;
 
   document.body.appendChild(overlay);
+
+  // ── Revision Notes Validation ────────────────────────────────────────────
+  const _REV_KEYS = ["intuition", "careful", "edgeCases", "mistakes", "futureReminder"];
+  const _REJECTED = new Set(["*","none","na","n/a",".","..","...","test","abc","xyz","todo","tbd","asdf","aaa","-","--","nil","null","undefined","hi","ok"]);
+
+  function _validateRevField(key) {
+    const el = document.getElementById("dsa-rev-" + key);
+    const errEl = document.getElementById("dsa-err-" + key);
+    if (!el || !errEl) return false;
+    const v = el.value.trim();
+    if (v.length === 0) { errEl.textContent = "Required."; return false; }
+    if (v.length < 20) { errEl.textContent = `Min 20 chars (${v.length} now).`; return false; }
+    if (_REJECTED.has(v.toLowerCase())) { errEl.textContent = "Provide a meaningful response."; return false; }
+    errEl.textContent = "";
+    return true;
+  }
+
+  function _validateAllRev() {
+    let allValid = true;
+    for (const k of _REV_KEYS) { if (!_validateRevField(k)) allValid = false; }
+    const btn = document.getElementById("dsa-push-btn");
+    if (btn && !btn.dataset.pushing) btn.disabled = !allValid;
+    return allValid;
+  }
+
+  // Attach live validation to each revision field
+  for (const k of _REV_KEYS) {
+    const el = document.getElementById("dsa-rev-" + k);
+    if (el) el.addEventListener("input", _validateAllRev);
+  }
 
   // ── Language Change Preview ──────────────────────────────────────────────
   document.getElementById("dsa-lang-select").addEventListener("change", (e) => {
@@ -315,6 +390,20 @@ window.showCommitDialog = async function(meta) {
       return;
     }
 
+    // Final validation of revision notes
+    if (!_validateAllRev()) {
+      setStatus(statusEl, "Complete all revision notes before pushing.", "#FF9F0A");
+      return;
+    }
+
+    // Collect revision notes
+    const revisionNotes = {};
+    for (const k of _REV_KEYS) {
+      const el = document.getElementById("dsa-rev-" + k);
+      revisionNotes[k] = el ? el.value.trim() : "";
+    }
+
+    btn.dataset.pushing = "1";
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Pushing...`;
     btn.disabled  = true;
     setStatus(statusEl, "Connecting to GitHub...", "#64D2FF");
@@ -340,6 +429,7 @@ window.showCommitDialog = async function(meta) {
           code:           meta.code,
           commitMessage,
           language,
+          revisionNotes,
         },
       });
 

@@ -28,6 +28,7 @@ import {
 import {
   getToken, clearAuth,
 } from "./src/storage-service.js";
+import { prependRevisionNotes } from "./src/revision-notes.js";
 
 // ---------------------------------------------------------------------------
 // Message router
@@ -173,8 +174,19 @@ async function handlePush(payload) {
     number:         payload.problemNumber,
   });
 
+  // Prepend revision notes comment block if notes were provided
+  let finalCode = payload.code;
+  if (payload.revisionNotes && typeof payload.revisionNotes === "object") {
+    finalCode = prependRevisionNotes(payload.code, payload.language, {
+      title: payload.problemTitle,
+      platform: payload.platform,
+      difficulty: payload.difficulty,
+      notes: payload.revisionNotes,
+    });
+  }
+
   // Push code file and per-problem README sequentially to avoid SHA conflicts
-  await gh.createOrUpdateFile(owner, repo, paths.codePath, payload.code, payload.commitMessage);
+  await gh.createOrUpdateFile(owner, repo, paths.codePath, finalCode, payload.commitMessage);
   await gh.createOrUpdateFile(owner, repo, paths.readmePath, readmeContent, `docs: add README for ${payload.problemTitle}`);
 
   // Update root README (best-effort — don't fail the whole push if this fails)

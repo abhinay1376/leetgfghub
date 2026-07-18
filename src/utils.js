@@ -47,7 +47,6 @@ export function parseRepoUrl(rawUrl) {
  * @returns {string}
  */
 export function leetcodeFolderName(number, slug) {
-  const padded = String(number || 0).padStart(4, "0");
   // Convert kebab-case slug to Title_Case: "koko-eating-bananas" → "Koko_Eating_Bananas"
   const clean = (slug || "unknown")
     .split(/[-_]+/)
@@ -55,7 +54,14 @@ export function leetcodeFolderName(number, slug) {
     .join("_")
     .replace(/[^a-zA-Z0-9_]/g, "")
     .replace(/^_|_$/g, "");
-  return `${padded}_${clean}`;
+
+  // Only pad if we have a real problem number (> 0)
+  if (number && Number(number) > 0) {
+    const padded = String(number).padStart(4, "0");
+    return `${padded}_${clean}`;
+  }
+  // Fallback: slug-only (avoids creating 0000_ folders)
+  return clean;
 }
 
 /**
