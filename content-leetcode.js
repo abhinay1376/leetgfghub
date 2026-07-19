@@ -15,6 +15,8 @@
   let pushed             = false;
   let debounce           = null;
   let seenPendingState   = false;  // Proves this is a live submission, not historical
+  let _capturedCode      = null;   // Code snapshotted at submit time (before page nav)
+  let _capturedLang      = null;   // Language snapshotted at submit time
 
   // ── Submission ID extraction ──────────────────────────────────────────────
   // LeetCode URLs for a submission result look like:
@@ -242,73 +244,110 @@
     return false;
   }
 
-  // ── Code extraction ───────────────────────────────────────────────────────
+  // ── Code & Language extraction ───────────────────────────────────────────
 
   /**
-   * Extract submitted code using DOM strategies first,
-   * then falling back to the MAIN world bridge (no CSP violations).
+   * Ask the bridge for the full submission record from __NEXT_DATA__.
+   * Returns { code, lang } or null.
+   */
+  function _getSubmissionDataFromBridge() {
+    return new Promise((resolve) => {
+      const eventId = "lc-sd-" + Date.now() + Math.random().toString(36).substring(2);
+      const listener = (event) => {
+        if (
+          event.data &&
+          event.data.source === "DSA_BRIDGE_RESPONSE" &&
+          event.data.type === "SUBMISSION_DATA" &&
+          event.data.eventId === eventId
+        ) {
+          window.removeEventListener("message", listener);
+          resolve(
+            event.data.code && event.data.code.trim().length > 10
+              ? { code: event.data.code, lang: event.data.lang }
+              : null
+          );
+        }
+      };
+      window.addEventListener("message", listener);
+      window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_SUBMISSION_DATA", eventId }, "*");
+      setTimeout(() => { window.removeEventListener("message", listener); resolve(null); }, 2000);
+    });
+  }
+
+  /**
+   * Ask the bridge for editor code (Monaco read-only model preferred).
+   * Returns code string or "".
+   */
+  function _getEditorCodeFromBridge() {
+    return new Promise((resolve) => {
+      const eventId = "lc-code-" + Date.now() + Math.random().toString(36).substring(2);
+      const listener = (event) => {
+        if (
+          event.data &&
+          event.data.source === "DSA_BRIDGE_RESPONSE" &&
+          event.data.type === "EDITOR_CODE" &&
+          event.data.eventId === eventId
+        ) {
+          window.removeEventListener("message", listener);
+          resolve((event.data.code || "").trim());
+        }
+      };
+      window.addEventListener("message", listener);
+      window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_EDITOR_CODE", eventId }, "*");
+      setTimeout(() => { window.removeEventListener("message", listener); resolve(""); }, 2000);
+    });
+  }
+
+  /**
+   * Extract the submitted code from the current submission result page.
+   *
+   * Priority order (most reliable → least reliable):
+   *   1. __NEXT_DATA__.submissionDetails.code  — exact accepted code from LC API
+   *   2. DOM [data-e2e-locator="submission-code"]  — rendered submission code element
+   *   3. <pre><code>  — static fallback
+   *   4. Bridge GET_EDITOR_CODE (read-only Monaco model preferred)
+   *
+   * Retries up to MAX_ATTEMPTS times to handle lazy rendering.
    */
   function getCodeFromPageContext() {
     return new Promise((resolve) => {
-      const MAX_ATTEMPTS = 6;
-      const ATTEMPT_DELAY_MS = 800;
+      const MAX_ATTEMPTS = 8;
+      const ATTEMPT_DELAY_MS = 700;
       let attempt = 0;
 
-      function tryExtract() {
+      async function tryExtract() {
         attempt++;
 
-        // Strategy 1: Dedicated submission code element (most reliable on result page)
+        // Strategy 1: __NEXT_DATA__.submissionDetails.code (authoritative)
+        const bridgeData = await _getSubmissionDataFromBridge();
+        if (bridgeData && bridgeData.code) {
+          // Cache the language too so getLanguage() can use it
+          if (bridgeData.lang) _capturedLang = _normalizeLang(bridgeData.lang);
+          return resolve(bridgeData.code);
+        }
+
+        // Strategy 2: DOM submission-code element
         const submissionCode = document.querySelector('[data-e2e-locator="submission-code"]');
         if (submissionCode && submissionCode.innerText.trim().length > 10) {
           return resolve(submissionCode.innerText.trim());
         }
 
-        // Strategy 2: <pre><code> block (rendered after page settles)
+        // Strategy 3: <pre><code>
         const preCodes = document.querySelectorAll('pre code');
         for (const tag of preCodes) {
           if (tag.innerText.trim().length > 10) return resolve(tag.innerText.trim());
         }
 
-        // Strategy 3: CodeMirror DOM
-        const cmCode = document.querySelector('.CodeMirror-code');
-        if (cmCode && cmCode.innerText.trim().length > 10) return resolve(cmCode.innerText.trim());
+        // Strategy 4: Bridge editor code (prefers read-only Monaco model)
+        const editorCode = await _getEditorCodeFromBridge();
+        if (editorCode.length > 10) return resolve(editorCode);
 
-        // Strategy 4: Ask the MAIN world bridge for Monaco/CodeMirror value (no CSP violation)
-        const eventId = "lc-code-" + Date.now() + Math.random().toString(36).substring(2);
-
-        const listener = (event) => {
-          if (
-            event.data &&
-            event.data.source === "DSA_BRIDGE_RESPONSE" &&
-            event.data.type === "EDITOR_CODE" &&
-            event.data.eventId === eventId
-          ) {
-            window.removeEventListener("message", listener);
-            const extractedCode = (event.data.code || "").trim();
-            if (extractedCode.length > 10) {
-              return resolve(extractedCode);
-            }
-            // Not ready yet — retry if attempts remain
-            if (attempt < MAX_ATTEMPTS) {
-              setTimeout(tryExtract, ATTEMPT_DELAY_MS);
-            } else {
-              resolve("");
-            }
-          }
-        };
-
-        window.addEventListener("message", listener);
-        window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_EDITOR_CODE", eventId }, "*");
-
-        // Safety timeout for this attempt
-        setTimeout(() => {
-          window.removeEventListener("message", listener);
-          if (attempt < MAX_ATTEMPTS) {
-            setTimeout(tryExtract, ATTEMPT_DELAY_MS);
-          } else {
-            resolve("");
-          }
-        }, 1500);
+        // Not ready yet — retry
+        if (attempt < MAX_ATTEMPTS) {
+          setTimeout(tryExtract, ATTEMPT_DELAY_MS);
+        } else {
+          resolve("");
+        }
       }
 
       tryExtract();
@@ -317,22 +356,19 @@
 
   // ── Language detection ────────────────────────────────────────────────────
 
-  function getLanguage() {
-    const langEl =
-      document.querySelector('[data-cy="lang-select"] .ant-select-selection-item') ||
-      document.querySelector('.select-mode button[class*="text-label"]') ||
-      document.querySelector('[data-e2e-locator="code-lang-button"]');
-    const raw = langEl?.innerText?.trim().toLowerCase() || "java";
+  /**
+   * Normalize raw LC language string → internal key.
+   */
+  function _normalizeLang(raw) {
     const langMap = {
-      "c++":        "cpp",
+      "c++":        "cpp",  "cpp":        "cpp",
       "javascript": "javascript",
       "typescript": "typescript",
-      "python3":    "python3",
-      "python":     "python",
+      "python3":    "python3", "python":     "python",
       "java":       "java",
       "c":          "c",
-      "c#":         "csharp",
-      "go":         "go",
+      "c#":         "csharp", "csharp":     "csharp",
+      "go":         "go",   "golang":     "go",
       "ruby":       "ruby",
       "swift":      "swift",
       "kotlin":     "kotlin",
@@ -340,7 +376,38 @@
       "rust":       "rust",
       "php":        "php",
     };
-    return langMap[raw] || "java";
+    return langMap[(raw || "").toLowerCase()] || (raw || "java").toLowerCase();
+  }
+
+  /**
+   * Detect language of the accepted submission.
+   *
+   * Priority:
+   *   1. _capturedLang — set by getCodeFromPageContext when submissionDetails
+   *      is available (most accurate — it IS the submission's language)
+   *   2. DOM element on the submission result page showing the language
+   *   3. Editor language selector (current selection — least reliable)
+   */
+  function getLanguage() {
+    // Use language captured from submissionDetails if available
+    if (_capturedLang) return _capturedLang;
+
+    // Try submission page language indicator (LC shows it near the code)
+    const submissionLangEl =
+      document.querySelector('[data-e2e-locator="submission-lang"]') ||
+      document.querySelector('.text-label-2[class*="lang"]') ||
+      document.querySelector('[class*="submissionDetailPanel"] [class*="lang"]');
+    if (submissionLangEl) {
+      const lang = _normalizeLang(submissionLangEl.innerText.trim());
+      if (lang) return lang;
+    }
+
+    // Fallback: editor language selector (may differ from submitted lang if user switched tabs)
+    const langEl =
+      document.querySelector('[data-cy="lang-select"] .ant-select-selection-item') ||
+      document.querySelector('.select-mode button[class*="text-label"]') ||
+      document.querySelector('[data-e2e-locator="code-lang-button"]');
+    return _normalizeLang(langEl?.innerText?.trim() || "java");
   }
 
   // ── Pending state detection ───────────────────────────────────────────────
@@ -400,6 +467,8 @@
       pushed   = false;
       clearTimeout(debounce);
       debounce = null;
+      _capturedCode = null;  // Clear per-submission cache on every navigation
+      _capturedLang = null;
 
       if (wasOnEditor && isNowOnResult) {
         seenPendingState = true;   // Editor → result = live submission
