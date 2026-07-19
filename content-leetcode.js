@@ -131,48 +131,31 @@
   }
 
   /**
-   * Async fallback: extract problem number via injected script that can read
-   * LeetCode's client-side JS context (React cache, GraphQL store, etc.)
+   * Async fallback: read problem number from the MAIN world bridge.
+   * The bridge (src/page-bridge.js) has access to window.__NEXT_DATA__.
    * @returns {Promise<number|null>}
    */
   function getProblemNumberAsync() {
     return new Promise((resolve) => {
       const eventId = "lc-num-" + Date.now() + Math.random().toString(36).substring(2);
-      const script = document.createElement("script");
-      script.textContent = `(function() {
-        var num = null;
-        try {
-          // Read from React's internal cache or __NEXT_DATA__
-          var nd = window.__NEXT_DATA__;
-          if (nd) {
-            var queries = nd.props && nd.props.pageProps && nd.props.pageProps.dehydratedState && nd.props.pageProps.dehydratedState.queries;
-            if (queries) {
-              for (var i = 0; i < queries.length; i++) {
-                var q = queries[i];
-                var fid = (q.state && q.state.data && q.state.data.question && q.state.data.question.questionFrontendId) ||
-                          (q.state && q.state.data && q.state.data.submissionDetails && q.state.data.submissionDetails.question && q.state.data.submissionDetails.question.questionFrontendId);
-                if (fid) { num = parseInt(fid); break; }
-              }
-            }
-          }
-        } catch(e) {}
-        window.postMessage({ type: 'DSA_PROBLEM_NUM', eventId: '${eventId}', num: num }, '*');
-      })();`;
 
       const listener = (event) => {
-        if (event.data?.type === "DSA_PROBLEM_NUM" && event.data.eventId === eventId) {
+        if (
+          event.data &&
+          event.data.source === "DSA_BRIDGE_RESPONSE" &&
+          event.data.type === "PROBLEM_NUM" &&
+          event.data.eventId === eventId
+        ) {
           window.removeEventListener("message", listener);
-          if (script.parentNode) script.remove();
           resolve(event.data.num || null);
         }
       };
-      window.addEventListener("message", listener);
-      (document.head || document.documentElement).appendChild(script);
 
-      // Safety timeout
+      window.addEventListener("message", listener);
+      window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_PROBLEM_NUM", eventId }, "*");
+
       setTimeout(() => {
         window.removeEventListener("message", listener);
-        if (script.parentNode) script.remove();
         resolve(null);
       }, 1500);
     });
@@ -262,9 +245,8 @@
   // ── Code extraction ───────────────────────────────────────────────────────
 
   /**
-   * Tries to extract the submitted code from the submission detail page.
-   * Attempts multiple strategies and retries up to maxAttempts times,
-   * waiting between each, to handle the page still rendering.
+   * Extract submitted code using DOM strategies first,
+   * then falling back to the MAIN world bridge (no CSP violations).
    */
   function getCodeFromPageContext() {
     return new Promise((resolve) => {
@@ -287,61 +269,40 @@
           if (tag.innerText.trim().length > 10) return resolve(tag.innerText.trim());
         }
 
-        // Strategy 3: CodeMirror
+        // Strategy 3: CodeMirror DOM
         const cmCode = document.querySelector('.CodeMirror-code');
         if (cmCode && cmCode.innerText.trim().length > 10) return resolve(cmCode.innerText.trim());
 
-        // Strategy 4: Inject script to read Monaco Editor API (gets full model content,
-        // not just visible view-lines — avoids incomplete-code bug with virtual scrolling)
-        const script  = document.createElement('script');
-        const eventId = "lc-code-fetch-" + Date.now() + Math.random().toString(36).substring(2);
-
-        script.textContent = [
-          "(function() {",
-          "  var code = '';",
-          "  try {",
-          "    if (window.monaco && window.monaco.editor) {",
-          // Prefer the read-only submission model (last created) but validate it has content
-          "      var models = window.monaco.editor.getModels();",
-          "      for (var i = models.length - 1; i >= 0; i--) {",
-          "        var val = models[i].getValue();",
-          "        if (val && val.trim().length > 10) { code = val; break; }",
-          "      }",
-          "    } else if (window.CodeMirror) {",
-          "      var cm = document.querySelector('.CodeMirror');",
-          "      if (cm && cm.CodeMirror) code = cm.CodeMirror.getValue();",
-          "    }",
-          "  } catch(e) {}",
-          "  window.postMessage({ type: 'DSA_CODE_RESULT', eventId: '" + eventId + "', code: code }, '*');",
-          "})();"
-        ].join("\n");
+        // Strategy 4: Ask the MAIN world bridge for Monaco/CodeMirror value (no CSP violation)
+        const eventId = "lc-code-" + Date.now() + Math.random().toString(36).substring(2);
 
         const listener = (event) => {
-          if (event.data && event.data.type === 'DSA_CODE_RESULT' && event.data.eventId === eventId) {
-            window.removeEventListener('message', listener);
-            if (script.parentNode) script.remove();
-
+          if (
+            event.data &&
+            event.data.source === "DSA_BRIDGE_RESPONSE" &&
+            event.data.type === "EDITOR_CODE" &&
+            event.data.eventId === eventId
+          ) {
+            window.removeEventListener("message", listener);
             const extractedCode = (event.data.code || "").trim();
             if (extractedCode.length > 10) {
               return resolve(extractedCode);
             }
-            // Code not ready yet — retry if attempts remain
+            // Not ready yet — retry if attempts remain
             if (attempt < MAX_ATTEMPTS) {
               setTimeout(tryExtract, ATTEMPT_DELAY_MS);
             } else {
-              resolve(""); // Give up
+              resolve("");
             }
           }
         };
 
-        window.addEventListener('message', listener);
-        (document.head || document.documentElement).appendChild(script);
+        window.addEventListener("message", listener);
+        window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_EDITOR_CODE", eventId }, "*");
 
-        // Safety timeout for this attempt's postMessage
+        // Safety timeout for this attempt
         setTimeout(() => {
-          window.removeEventListener('message', listener);
-          if (script.parentNode) script.remove();
-          // If we haven't resolved yet, try again
+          window.removeEventListener("message", listener);
           if (attempt < MAX_ATTEMPTS) {
             setTimeout(tryExtract, ATTEMPT_DELAY_MS);
           } else {

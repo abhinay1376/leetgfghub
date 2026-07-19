@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LeetGFGHub",
-  "version": "3.0.0",
+  "version": "3.2.1",
   "description": "Automatically sync your LeetCode and GeeksForGeeks accepted solutions to GitHub.",
 
   "permissions": [
@@ -27,8 +27,20 @@
   "content_scripts": [
     {
       "matches": ["https://leetcode.com/problems/*"],
+      "js": ["src/page-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://leetcode.com/problems/*"],
       "js": ["src/commit-dialog.js", "content-leetcode.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.geeksforgeeks.org/*"],
+      "js": ["src/page-bridge.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     },
     {
       "matches": ["https://www.geeksforgeeks.org/*"],

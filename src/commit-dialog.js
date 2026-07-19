@@ -22,7 +22,12 @@ function _lcFolderName(number, slug) {
 }
 
 function _gfgFolderName(title, slug) {
-  const source = title || slug || "unknown";
+  const raw = title || slug || "unknown";
+  // Strip GFG-appended status suffixes before building folder name
+  const source = raw
+    .replace(/\s*[|\u2013\-]\s*(solved|accepted|correct|passed|submission|practice).*$/i, "")
+    .replace(/\s*(solved|\(solved\)|\[solved\])\s*$/i, "")
+    .trim() || "unknown";
   return source
     .trim()
     .split(/\s+/)
@@ -106,64 +111,63 @@ window.showCommitDialog = async function(meta) {
   const overlay = document.createElement("div");
   overlay.id = "dsa-pusher-overlay";
   overlay.style.cssText = [
-    "position:fixed", "inset:0", "background:rgba(0, 0, 0, 0.35)",
+    "position:fixed", "inset:0", "background:transparent",
     "z-index:2147483647",
-    "display:flex", "align-items:flex-end", "justify-content:flex-end",
+    "display:flex", "align-items:flex-end", "justify-content:flex-start",
     "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
-    "backdrop-filter:blur(20px) saturate(160%)", "-webkit-backdrop-filter:blur(20px) saturate(160%)",
-    "animation: dsaFadeIn 0.25s ease-out forwards"
+    "pointer-events:none"
   ].join(";");
 
   overlay.innerHTML = `
     <div id="dsa-pusher-card" style="
-      background: rgba(28, 28, 30, 0.82);
+      background: rgba(22, 22, 24, 0.97);
       color: #F5F5F7;
-      border-radius: 24px 24px 0 24px;
-      padding: 32px;
-      width: 420px;
-      max-width: calc(100vw - 24px);
-      max-height: calc(100vh - 32px);
+      border-radius: 0 20px 20px 0;
+      padding: 28px 24px;
+      width: 400px;
+      max-width: calc(100vw - 16px);
+      max-height: 100vh;
       overflow-y: auto;
-      margin: 0 16px 16px 0;
-      box-shadow: -8px 0 40px rgba(0,0,0,0.4), 0 24px 48px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.08);
-      backdrop-filter: blur(48px) saturate(180%);
-      -webkit-backdrop-filter: blur(48px) saturate(180%);
-      animation: dsaSlideInRight 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      margin: 0;
+      box-shadow: 8px 0 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
+      animation: dsaSlideInLeft 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 18px;
+      pointer-events: all;
     ">
       <style>
-        @keyframes dsaFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes dsaSlideInRight {
-          0%   { opacity: 0; transform: translateX(60px) scale(0.96); }
-          100% { opacity: 1; transform: translateX(0)   scale(1); }
+        @keyframes dsaSlideInLeft {
+          0%   { opacity: 0; transform: translateX(-50px); }
+          100% { opacity: 1; transform: translateX(0); }
         }
         @keyframes dsaCheckDraw { to { stroke-dashoffset: 0; } }
         
         .dsa-rev-field { margin-bottom: 10px; }
         .dsa-field-err { font-size: 11px; color: #FF453A; margin-top: 4px; min-height: 14px; }
-        
         #dsa-pusher-card * { box-sizing: border-box; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif; }
+        #dsa-pusher-card ::-webkit-scrollbar { width: 4px; }
+        #dsa-pusher-card ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
         
         /* Premium inputs */
         .dsa-input {
           width: 100%;
-          background: rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.09);
           color: #F5F5F7;
-          border-radius: 12px;
-          padding: 12px 14px;
+          border-radius: 10px;
+          padding: 10px 12px;
           font-size: 13px;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           outline: none;
         }
         .dsa-input:focus {
-          border-color: rgba(255, 255, 255, 0.3);
-          background: rgba(0, 0, 0, 0.3);
-          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+          border-color: rgba(255,255,255,0.28);
+          background: rgba(255,255,255,0.06);
+          box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
         }
+        .dsa-input::placeholder { color: #5A5A60; font-style: normal; }
         
         /* Buttons */
         .dsa-btn {
@@ -246,10 +250,10 @@ window.showCommitDialog = async function(meta) {
         </div>
       </div>
 
-      <!-- CODE PREVIEW -->
+      <!-- CODE PREVIEW (editable) -->
       <div>
-        <span class="dsa-label">Code Preview</span>
-        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px; max-height: 160px; overflow-y: auto; font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 1.5; color: #AEAEB2; white-space: pre-wrap; word-break: break-all;" id="dsa-code-preview">${_escapeHtml(meta.code?.substring(0, 2000) || '')}</div>
+        <span class="dsa-label">Code Preview <span style="font-size:10px;color:#64D2FF;font-weight:500;background:rgba(100,210,255,0.12);padding:2px 7px;border-radius:100px;text-transform:none;letter-spacing:0;">Editable</span></span>
+        <textarea id="dsa-code-preview" class="dsa-input" rows="8" style="resize:vertical;font-family:'SF Mono',Menlo,Monaco,Consolas,monospace;font-size:11px;line-height:1.6;white-space:pre;overflow-x:auto;tab-size:4;">${_escapeHtml(meta.code || '')}</textarea>
       </div>
 
       <!-- REVISION NOTES (Mandatory) -->
@@ -284,6 +288,18 @@ window.showCommitDialog = async function(meta) {
           <span class="dsa-label">Future Reminder</span>
           <textarea id="dsa-rev-futureReminder" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="What should your future self remember when revising this?"></textarea>
           <div class="dsa-field-err" id="dsa-err-futureReminder"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="dsa-rev-field" style="margin-bottom:0">
+            <span class="dsa-label">Time Complexity</span>
+            <input type="text" id="dsa-rev-timeComplexity" class="dsa-input" placeholder="e.g. O(n log n)" />
+            <div class="dsa-field-err" id="dsa-err-timeComplexity"></div>
+          </div>
+          <div class="dsa-rev-field" style="margin-bottom:0">
+            <span class="dsa-label">Space Complexity</span>
+            <input type="text" id="dsa-rev-spaceComplexity" class="dsa-input" placeholder="e.g. O(n)" />
+            <div class="dsa-field-err" id="dsa-err-spaceComplexity"></div>
+          </div>
         </div>
       </div>
 
@@ -332,7 +348,8 @@ window.showCommitDialog = async function(meta) {
   document.body.appendChild(overlay);
 
   // ── Revision Notes Validation ────────────────────────────────────────────
-  const _REV_KEYS = ["intuition", "careful", "edgeCases", "mistakes", "futureReminder"];
+  const _REV_KEYS = ["intuition", "careful", "edgeCases", "mistakes", "futureReminder", "timeComplexity", "spaceComplexity"];
+  const _COMPLEXITY_KEYS = new Set(["timeComplexity", "spaceComplexity"]);
   const _REJECTED = new Set(["*","none","na","n/a",".","..","...","test","abc","xyz","todo","tbd","asdf","aaa","-","--","nil","null","undefined","hi","ok"]);
 
   function _validateRevField(key) {
@@ -341,7 +358,8 @@ window.showCommitDialog = async function(meta) {
     if (!el || !errEl) return false;
     const v = el.value.trim();
     if (v.length === 0) { errEl.textContent = "Required."; return false; }
-    if (v.length < 20) { errEl.textContent = `Min 20 chars (${v.length} now).`; return false; }
+    const minLen = _COMPLEXITY_KEYS.has(key) ? 3 : 20;
+    if (v.length < minLen) { errEl.textContent = `Min ${minLen} chars (${v.length} now).`; return false; }
     if (_REJECTED.has(v.toLowerCase())) { errEl.textContent = "Provide a meaningful response."; return false; }
     errEl.textContent = "";
     return true;
@@ -426,7 +444,7 @@ window.showCommitDialog = async function(meta) {
           problemTitle:   meta.title,
           problemUrl:     meta.problemUrl,
           difficulty:     meta.difficulty,
-          code:           meta.code,
+          code:           document.getElementById("dsa-code-preview")?.value ?? meta.code,
           commitMessage,
           language,
           revisionNotes,
@@ -467,7 +485,7 @@ function _dismissOverlay(overlay) {
   const card = overlay.querySelector('#dsa-pusher-card');
   if (card) {
     card.style.transition = "transform 0.25s cubic-bezier(0.4, 0, 1, 1), opacity 0.25s ease";
-    card.style.transform  = "translateX(80px) scale(0.96)";
+    card.style.transform  = "translateX(-60px)";
     card.style.opacity    = "0";
   }
   overlay.style.transition = "opacity 0.25s ease";

@@ -78,7 +78,7 @@
       document.querySelector('.problemPageTitle') ||
       document.querySelector('[class*="problem-statement"] h1') ||
       document.querySelector('h1');
-    const title = titleEl?.innerText?.trim() || document.title.split("|")[0].trim();
+    const title = _sanitizeTitle(titleEl?.innerText?.trim() || document.title.split("|")[0].trim());
 
     // Slug from URL — last non-empty path segment that is NOT digits-only
     // GFG problem URLs: /problems/floor-in-a-sorted-array/1
@@ -96,6 +96,18 @@
     const problemUrl = "https://www.geeksforgeeks.org/problems/" + slug + "/1";
 
     return { title, slug, difficulty, problemUrl };
+  }
+
+  /**
+   * Remove trailing status words GFG appends to problem titles.
+   * e.g. "Floor In A Sorted Array | Solved" → "Floor In A Sorted Array"
+   */
+  function _sanitizeTitle(raw) {
+    if (!raw) return "Unknown";
+    return raw
+      .replace(/\s*[|–\-]\s*(solved|accepted|correct|passed|submission|practice).*$/i, "")
+      .replace(/\s*(solved|\(solved\)|\[solved\])\s*$/i, "")
+      .trim();
   }
 
   // ── Code extraction (Injected Script) ────────────────────────────────────
@@ -131,52 +143,27 @@
         if (code.trim().length > 0) return resolve(code);
       }
 
-      // 5. Inject script to read from editor APIs directly (last resort)
-      const script = document.createElement('script');
+      // 5. Ask the MAIN world bridge (src/page-bridge.js) for editor value — no CSP violation
       const eventId = "gfg-code-fetch-" + Date.now() + Math.random().toString(36).substring(2);
 
-      script.textContent = [
-        "(function() {",
-        "  var code = '';",
-        "  try {",
-        "    if (window.ace) {",
-        "      var editorEls = document.querySelectorAll('.ace_editor');",
-        "      if (editorEls.length > 0) {",
-        "        var editor = window.ace.edit(editorEls[editorEls.length - 1]);",
-        "        code = editor.getValue();",
-        "      }",
-        "    } else if (window.monaco && window.monaco.editor) {",
-        "      var models = window.monaco.editor.getModels();",
-        "      if (models.length > 0) code = models[models.length - 1].getValue();",
-        "    } else if (document.querySelector('.CodeMirror')) {",
-        "      var cmElements = document.querySelectorAll('.CodeMirror');",
-        "      var lastCm = cmElements[cmElements.length - 1];",
-        "      if (lastCm && lastCm.CodeMirror) code = lastCm.CodeMirror.getValue();",
-        "    }",
-        "  } catch(e) {}",
-        "  if (!code) {",
-        "    var textarea = document.querySelector('[class*=\"editor\"] textarea, .ace_text-input');",
-        "    if (textarea) code = textarea.value;",
-        "  }",
-        "  window.postMessage({ type: 'DSA_CODE_RESULT', eventId: '" + eventId + "', code: code }, '*');",
-        "})();"
-      ].join("\n");
-
       const listener = (event) => {
-        if (event.data && event.data.type === 'DSA_CODE_RESULT' && event.data.eventId === eventId) {
-          window.removeEventListener('message', listener);
-          if (script.parentNode) script.remove();
-          resolve(event.data.code);
+        if (
+          event.data &&
+          event.data.source === "DSA_BRIDGE_RESPONSE" &&
+          event.data.type === "EDITOR_CODE" &&
+          event.data.eventId === eventId
+        ) {
+          window.removeEventListener("message", listener);
+          resolve(event.data.code || "");
         }
       };
 
-      window.addEventListener('message', listener);
-      (document.head || document.documentElement).appendChild(script);
+      window.addEventListener("message", listener);
+      window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_EDITOR_CODE", eventId }, "*");
 
       // Fallback timeout
       setTimeout(() => {
-        window.removeEventListener('message', listener);
-        if (script.parentNode) script.remove();
+        window.removeEventListener("message", listener);
         resolve("");
       }, 2000);
     });

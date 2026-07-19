@@ -72,7 +72,12 @@ export function leetcodeFolderName(number, slug) {
  * @returns {string}
  */
 export function gfgFolderName(title, slug) {
-  const source = title || slug || "unknown";
+  const raw = title || slug || "unknown";
+  // Strip GFG-appended status suffixes (e.g. "| Solved", "(Solved)")
+  const source = raw
+    .replace(/\s*[|\u2013\-]\s*(solved|accepted|correct|passed|submission|practice).*$/i, "")
+    .replace(/\s*(solved|\(solved\)|\[solved\])\s*$/i, "")
+    .trim() || "unknown";
   return source
     .trim()
     .split(/\s+/)

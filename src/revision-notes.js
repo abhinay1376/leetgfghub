@@ -38,11 +38,13 @@ function wrapComment(language, body) {
 // ── Revision note fields ────────────────────────────────────────────────────
 
 export const REVISION_FIELDS = [
-  { key: "intuition",    label: "Intuition",                      placeholder: "How did you arrive at this approach? What pattern did you recognize?" },
-  { key: "careful",      label: "Lines / Logic To Be Careful With", placeholder: "Tricky conditions, off-by-one, overflow, pointer movement, etc." },
-  { key: "edgeCases",    label: "Edge Cases Handled",              placeholder: "Empty input, single element, duplicates, negative numbers, etc." },
-  { key: "mistakes",     label: "Mistakes I Made",                 placeholder: "Wrong base case, forgot to sort, incorrect boundary, etc." },
-  { key: "futureReminder", label: "Future Reminder",               placeholder: "What should your future self remember when revising this?" },
+  { key: "intuition",       label: "Intuition",                       placeholder: "How did you arrive at this approach? What pattern did you recognize?" },
+  { key: "careful",         label: "Lines / Logic To Be Careful With", placeholder: "Tricky conditions, off-by-one, overflow, pointer movement, etc." },
+  { key: "edgeCases",       label: "Edge Cases Handled",               placeholder: "Empty input, single element, duplicates, negative numbers, etc." },
+  { key: "mistakes",        label: "Mistakes I Made",                  placeholder: "Wrong base case, forgot to sort, incorrect boundary, etc." },
+  { key: "futureReminder",  label: "Future Reminder",                  placeholder: "What should your future self remember when revising this?" },
+  { key: "timeComplexity",  label: "Time Complexity",                  placeholder: "e.g. O(n log n) — explain why" },
+  { key: "spaceComplexity", label: "Space Complexity",                 placeholder: "e.g. O(n) — explain why" },
 ];
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -53,18 +55,23 @@ const REJECTED_VALUES = new Set([
   "-", "--", "nil", "null", "undefined",
 ]);
 
+// Complexity fields have a shorter minimum (e.g. "O(1)" is valid)
+const COMPLEXITY_KEYS = new Set(["timeComplexity", "spaceComplexity"]);
+
 /**
  * Validate a single revision field value.
  * @param {string} value
+ * @param {string} [key]  – field key, used to relax complexity min-length
  * @returns {{ valid: boolean, error?: string }}
  */
-export function validateField(value) {
+export function validateField(value, key) {
   const trimmed = (value || "").trim();
   if (trimmed.length === 0) {
     return { valid: false, error: "This field is required." };
   }
-  if (trimmed.length < 20) {
-    return { valid: false, error: `Minimum 20 characters (currently ${trimmed.length}).` };
+  const minLen = COMPLEXITY_KEYS.has(key) ? 3 : 20;
+  if (trimmed.length < minLen) {
+    return { valid: false, error: `Minimum ${minLen} characters (currently ${trimmed.length}).` };
   }
   if (REJECTED_VALUES.has(trimmed.toLowerCase())) {
     return { valid: false, error: "Please provide a meaningful response." };
@@ -81,7 +88,7 @@ export function validateAllFields(notes) {
   const errors = {};
   let valid = true;
   for (const field of REVISION_FIELDS) {
-    const result = validateField(notes[field.key]);
+    const result = validateField(notes[field.key], field.key);
     if (!result.valid) {
       errors[field.key] = result.error;
       valid = false;
@@ -139,6 +146,14 @@ export function buildRevisionBlock(opts) {
     "",
     "Future Reminder",
     notes.futureReminder?.trim() || "",
+    "",
+    "─".repeat(50),
+    "",
+    "Time Complexity",
+    notes.timeComplexity?.trim() || "",
+    "",
+    "Space Complexity",
+    notes.spaceComplexity?.trim() || "",
     "",
     "═".repeat(50),
   ].filter(l => l !== null);
