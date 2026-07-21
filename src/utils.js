@@ -177,14 +177,41 @@ export function generateProblemPath(opts) {
  *   submissionDate: string,
  *   language: string,
  *   number?: number|string,
+ *   revisionNotes?: Record<string, string>,  // Optional: { intuition, careful, edgeCases, timeComplexity, spaceComplexity }
  * }} opts
  * @returns {string}
  */
 export function buildProblemReadme(opts) {
-  const { title, platform, difficulty, problemUrl, submissionDate, language, number } = opts;
+  const { title, platform, difficulty, problemUrl, submissionDate, language, number, revisionNotes } = opts;
   const platformLabel = platform === "leetcode" ? "LeetCode" : "GeeksForGeeks";
   const displayNum    = number ? `${String(number).padStart(4, "0")}. ` : "";
   const diffLine      = difficulty ? `**Difficulty:** ${difficulty}  \n` : "";
+
+  // Handle complexity values: use actual input or default to O(?)
+  const timeComplexity = revisionNotes?.timeComplexity?.trim() || "O(?)";
+  const spaceComplexity = revisionNotes?.spaceComplexity?.trim() || "O(?)";
+
+  // Build revision notes section if present
+  let revisionSection = "";
+  if (revisionNotes) {
+    const sections = [];
+    
+    if (revisionNotes.intuition?.trim()) {
+      sections.push("### Intuition\n" + revisionNotes.intuition.trim());
+    }
+    
+    if (revisionNotes.careful?.trim()) {
+      sections.push("### Lines / Logic To Be Careful With\n" + revisionNotes.careful.trim());
+    }
+    
+    if (revisionNotes.edgeCases?.trim()) {
+      sections.push("### Edge Cases Handled\n" + revisionNotes.edgeCases.trim());
+    }
+
+    if (sections.length > 0) {
+      revisionSection = "\n## Revision Notes\n\n" + sections.join("\n\n") + "\n";
+    }
+  }
 
   return `# ${displayNum}${title}
 
@@ -199,9 +226,9 @@ ${diffLine}**Problem Link:** [View Problem](${problemUrl})
 
 ## Time & Space Complexity
 
-**Time Complexity:** O(?)  
-**Space Complexity:** O(?)  
-
+**Time Complexity:** ${timeComplexity}  
+**Space Complexity:** ${spaceComplexity}  
+${revisionSection}
 ## Solution
 
 See \`solution${getExtension(language)}\` in this folder.

@@ -303,11 +303,12 @@
    *
    * Priority order (most reliable → least reliable):
    *   1. __NEXT_DATA__.submissionDetails.code  — exact accepted code from LC API
-   *   2. DOM [data-e2e-locator="submission-code"]  — rendered submission code element
-   *   3. <pre><code>  — static fallback
-   *   4. Bridge GET_EDITOR_CODE (read-only Monaco model preferred)
+   *   2. Bridge GET_EDITOR_CODE (read-only Monaco model — source of truth)
+   *   3. DOM [data-e2e-locator="submission-code"]  — rendered submission code element
+   *   4. CodeMirror / ACE editors
    *
    * Retries up to MAX_ATTEMPTS times to handle lazy rendering.
+   * Note: Removed <pre><code> extraction (captures test output during retries).
    */
   function getCodeFromPageContext() {
     return new Promise((resolve) => {
@@ -318,29 +319,25 @@
       async function tryExtract() {
         attempt++;
 
-        // Strategy 1: __NEXT_DATA__.submissionDetails.code (authoritative)
+        // Strategy 1: __NEXT_DATA__.submissionDetails.code (fast, authoritative when cache is fresh)
         const bridgeData = await _getSubmissionDataFromBridge();
         if (bridgeData && bridgeData.code) {
-          // Cache the language too so getLanguage() can use it
           if (bridgeData.lang) _capturedLang = _normalizeLang(bridgeData.lang);
           return resolve(bridgeData.code);
         }
 
-        // Strategy 2: DOM submission-code element
+        // Strategy 2: Bridge editor code (prefers read-only Monaco model — source of truth on submission pages)
+        // Moved up: After debounce/retries, Monaco is guaranteed ready and contains the accepted code
+        const editorCode = await _getEditorCodeFromBridge();
+        if (editorCode.length > 10) {
+          return resolve(editorCode);
+        }
+
+        // Strategy 3: DOM submission-code element
         const submissionCode = document.querySelector('[data-e2e-locator="submission-code"]');
         if (submissionCode && submissionCode.innerText.trim().length > 10) {
           return resolve(submissionCode.innerText.trim());
         }
-
-        // Strategy 3: <pre><code>
-        const preCodes = document.querySelectorAll('pre code');
-        for (const tag of preCodes) {
-          if (tag.innerText.trim().length > 10) return resolve(tag.innerText.trim());
-        }
-
-        // Strategy 4: Bridge editor code (prefers read-only Monaco model)
-        const editorCode = await _getEditorCodeFromBridge();
-        if (editorCode.length > 10) return resolve(editorCode);
 
         // Not ready yet — retry
         if (attempt < MAX_ATTEMPTS) {
