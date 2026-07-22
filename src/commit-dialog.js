@@ -271,23 +271,13 @@ window.showCommitDialog = async function(meta) {
         </div>
         <div class="dsa-rev-field">
           <span class="dsa-label">Lines / Logic To Be Careful With</span>
-          <textarea id="dsa-rev-careful" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Tricky conditions, off-by-one, overflow, pointer movement, etc."></textarea>
+          <textarea id="dsa-rev-careful" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Tricky conditions, off-by-one, overflow, pointer movement, mistakes made, etc."></textarea>
           <div class="dsa-field-err" id="dsa-err-careful"></div>
         </div>
         <div class="dsa-rev-field">
           <span class="dsa-label">Edge Cases Handled</span>
           <textarea id="dsa-rev-edgeCases" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Empty input, single element, duplicates, negative numbers, etc."></textarea>
           <div class="dsa-field-err" id="dsa-err-edgeCases"></div>
-        </div>
-        <div class="dsa-rev-field">
-          <span class="dsa-label">Mistakes I Made</span>
-          <textarea id="dsa-rev-mistakes" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Wrong base case, forgot to sort, incorrect boundary, etc."></textarea>
-          <div class="dsa-field-err" id="dsa-err-mistakes"></div>
-        </div>
-        <div class="dsa-rev-field">
-          <span class="dsa-label">Future Reminder</span>
-          <textarea id="dsa-rev-futureReminder" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="What should your future self remember when revising this?"></textarea>
-          <div class="dsa-field-err" id="dsa-err-futureReminder"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div class="dsa-rev-field" style="margin-bottom:0">
@@ -348,7 +338,7 @@ window.showCommitDialog = async function(meta) {
   document.body.appendChild(overlay);
 
   // ── Revision Notes Validation ────────────────────────────────────────────
-  const _REV_KEYS = ["intuition", "careful", "edgeCases", "mistakes", "futureReminder", "timeComplexity", "spaceComplexity"];
+  const _REV_KEYS = ["intuition", "careful", "edgeCases", "timeComplexity", "spaceComplexity"];
   const _COMPLEXITY_KEYS = new Set(["timeComplexity", "spaceComplexity"]);
   const _REJECTED = new Set(["*","none","na","n/a",".","..","...","test","abc","xyz","todo","tbd","asdf","aaa","-","--","nil","null","undefined","hi","ok"]);
 

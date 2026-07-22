@@ -39,12 +39,10 @@ function wrapComment(language, body) {
 
 export const REVISION_FIELDS = [
   { key: "intuition",       label: "Intuition",                       placeholder: "How did you arrive at this approach? What pattern did you recognize?" },
-  { key: "careful",         label: "Lines / Logic To Be Careful With", placeholder: "Tricky conditions, off-by-one, overflow, pointer movement, etc." },
+  { key: "careful",         label: "Lines / Logic To Be Careful With", placeholder: "Tricky conditions, off-by-one, overflow, pointer movement, mistakes made, etc." },
   { key: "edgeCases",       label: "Edge Cases Handled",               placeholder: "Empty input, single element, duplicates, negative numbers, etc." },
-  { key: "mistakes",        label: "Mistakes I Made",                  placeholder: "Wrong base case, forgot to sort, incorrect boundary, etc." },
-  { key: "futureReminder",  label: "Future Reminder",                  placeholder: "What should your future self remember when revising this?" },
-  { key: "timeComplexity",  label: "Time Complexity",                  placeholder: "e.g. O(n log n) — explain why" },
-  { key: "spaceComplexity", label: "Space Complexity",                 placeholder: "e.g. O(n) — explain why" },
+  { key: "timeComplexity",  label: "Time Complexity",                  placeholder: "e.g. O(n log n)" },
+  { key: "spaceComplexity", label: "Space Complexity",                 placeholder: "e.g. O(n)" },
 ];
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -139,16 +137,6 @@ export function buildRevisionBlock(opts) {
     "",
     "─".repeat(50),
     "",
-    "Mistakes I Made",
-    notes.mistakes?.trim() || "",
-    "",
-    "─".repeat(50),
-    "",
-    "Future Reminder",
-    notes.futureReminder?.trim() || "",
-    "",
-    "─".repeat(50),
-    "",
     "Time Complexity",
     notes.timeComplexity?.trim() || "",
     "",
@@ -162,7 +150,47 @@ export function buildRevisionBlock(opts) {
 }
 
 /**
+ * Build revision notes formatted for README.md (Markdown).
+ * Used by utils.js buildProblemReadme().
+ * @param {{
+ *   notes: Record<string, string>,
+ * }} opts
+ * @returns {string}
+ */
+export function buildReadmeNotes(opts) {
+  const { notes } = opts;
+  if (!notes || Object.keys(notes).length === 0) return "";
+
+  const lines = [
+    "## Revision Notes",
+    "",
+  ];
+
+  if (notes.intuition?.trim()) {
+    lines.push("### Intuition");
+    lines.push(notes.intuition.trim());
+    lines.push("");
+  }
+
+  if (notes.careful?.trim()) {
+    lines.push("### Lines / Logic To Be Careful With");
+    lines.push(notes.careful.trim());
+    lines.push("");
+  }
+
+  if (notes.edgeCases?.trim()) {
+    lines.push("### Edge Cases Handled");
+    lines.push(notes.edgeCases.trim());
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * Prepend the revision comment block to source code.
+ * NOTE: This is deprecated — new code stores notes in README instead.
+ * Kept for backward compatibility / advanced use cases.
  * @param {string} code - original source code
  * @param {string} language
  * @param {{
