@@ -245,7 +245,6 @@ window.showCommitDialog = async function(meta) {
         <div style="font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.6; color: #8E8E93;">
           <div style="color: #F5F5F7;">${_escapeHtml(folderBase)}/</div>
           <div>└── <span style="color: #F5F5F7;">${_escapeHtml(problemFolder)}/</span></div>
-          <div>    ├── <span style="color: #64D2FF;" id="dsa-preview-ext">solution${ext}</span></div>
           <div>    └── <span style="color: #FFD60A;">README.md</span></div>
         </div>
       </div>
@@ -368,12 +367,6 @@ window.showCommitDialog = async function(meta) {
     const el = document.getElementById("dsa-rev-" + k);
     if (el) el.addEventListener("input", _validateAllRev);
   }
-
-  // ── Language Change Preview ──────────────────────────────────────────────
-  document.getElementById("dsa-lang-select").addEventListener("change", (e) => {
-    const extEl = document.getElementById("dsa-preview-ext");
-    if (extEl) extEl.textContent = "solution" + _getExt(e.target.value);
-  });
 
   // ── Cancel ────────────────────────────────────────────────────────────────
   document.getElementById("dsa-cancel-btn").onclick = () => {
