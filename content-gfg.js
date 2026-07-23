@@ -114,36 +114,12 @@
 
   function getCodeFromPageContext() {
     return new Promise((resolve) => {
-      // 1. Try to find code block in submission details
-      const codeTags = document.querySelectorAll('pre code, .submission-code, [class*="submitted-code"]');
-      for (const tag of codeTags) {
-        if (tag.innerText.trim().length > 0) {
-          return resolve(tag.innerText);
-        }
-      }
-
-      // 2. Try CodeMirror DOM scraping first (most reliable on GFG)
-      const cmLines = document.querySelectorAll('.CodeMirror-line');
-      if (cmLines.length > 0) {
-        const code = Array.from(cmLines).map(l => l.innerText).join("\n");
-        if (code.trim().length > 0) return resolve(code);
-      }
-
-      // 3. Try ACE editor DOM
-      const aceLines = document.querySelectorAll('.ace_line');
-      if (aceLines.length > 0) {
-        const code = Array.from(aceLines).map(l => l.innerText).join("\n");
-        if (code.trim().length > 0) return resolve(code);
-      }
-
-      // 4. Try Monaco view-lines DOM
-      const viewLines = document.querySelectorAll('.view-lines .view-line');
-      if (viewLines.length > 0) {
-        const code = Array.from(viewLines).map(l => l.innerText).join("\n");
-        if (code.trim().length > 0) return resolve(code);
-      }
-
-      // 5. Ask the MAIN world bridge (src/page-bridge.js) for editor value — no CSP violation
+      // ── Strategy 1: Bridge GET_EDITOR_CODE — SOURCE OF TRUTH ─────────────
+      // Reads the live Monaco / CodeMirror / ACE model from the MAIN world.
+      // This is always the user's actual editor content — never test output,
+      // template code, or editorial snippets.
+      // DOM strategies below only run when the bridge returns empty (e.g. the
+      // editor is not yet initialised or the bridge script did not load).
       const eventId = "gfg-code-fetch-" + Date.now() + Math.random().toString(36).substring(2);
 
       const listener = (event) => {
@@ -154,19 +130,83 @@
           event.data.eventId === eventId
         ) {
           window.removeEventListener("message", listener);
-          resolve(event.data.code || "");
+          const bridgeCode = (event.data.code || "").trim();
+
+          if (bridgeCode.length > 0) {
+            // Bridge returned real code — use it directly, skip all DOM strategies.
+            return resolve(bridgeCode);
+          }
+
+          // Bridge returned empty — fall through to DOM strategies.
+          resolve(_extractCodeFromDom());
         }
       };
 
       window.addEventListener("message", listener);
       window.postMessage({ source: "DSA_BRIDGE_REQUEST", type: "GET_EDITOR_CODE", eventId }, "*");
 
-      // Fallback timeout
+      // If the bridge never replies (e.g. page-bridge.js failed to load),
+      // fall through to DOM strategies after the timeout.
       setTimeout(() => {
         window.removeEventListener("message", listener);
-        resolve("");
+        resolve(_extractCodeFromDom());
       }, 2000);
     });
+  }
+
+  /**
+   * DOM-based code extraction — used ONLY when the bridge returns empty.
+   * Priority: CodeMirror → ACE → Monaco view-lines → <pre><code> (last resort).
+   *
+   * The <pre><code> strategy is last because it can match test output panes,
+   * editorial code blocks, and sample solutions that GFG renders on the same page.
+   * We apply selector guards to reject the most common non-submission containers.
+   *
+   * @returns {string}
+   */
+  function _extractCodeFromDom() {
+    // Strategy 2: CodeMirror DOM (GFG's primary editor on most pages)
+    const cmLines = document.querySelectorAll('.CodeMirror-line');
+    if (cmLines.length > 0) {
+      const code = Array.from(cmLines).map(l => l.innerText).join("\n");
+      if (code.trim().length > 0) return code;
+    }
+
+    // Strategy 3: ACE editor DOM
+    const aceLines = document.querySelectorAll('.ace_line');
+    if (aceLines.length > 0) {
+      const code = Array.from(aceLines).map(l => l.innerText).join("\n");
+      if (code.trim().length > 0) return code;
+    }
+
+    // Strategy 4: Monaco view-lines DOM
+    const viewLines = document.querySelectorAll('.view-lines .view-line');
+    if (viewLines.length > 0) {
+      const code = Array.from(viewLines).map(l => l.innerText).join("\n");
+      if (code.trim().length > 0) return code;
+    }
+
+    // Strategy 5: <pre><code> / .submission-code — LAST RESORT.
+    // Guard: only accept elements that are inside an editor or submission
+    // container, NOT inside test-output panels, editorial sections, or
+    // read-only example blocks.
+    const REJECT_PARENTS = [
+      '[class*="editorial"]', '[class*="Editorial"]',
+      '[class*="example"]',   '[class*="Example"]',
+      '[class*="testcase"]',  '[class*="TestCase"]',
+      '[class*="output"]',    '[class*="Output"]',
+      '[class*="sample"]',    '[class*="Sample"]',
+    ].join(", ");
+
+    const codeTags = document.querySelectorAll('pre code, .submission-code, [class*="submitted-code"]');
+    for (const tag of codeTags) {
+      // Skip if this element lives inside a known non-submission container
+      if (tag.closest(REJECT_PARENTS)) continue;
+      const text = tag.innerText.trim();
+      if (text.length > 0) return text;
+    }
+
+    return "";
   }
 
   // ── Language detection ───────────────────────────────────────────────────

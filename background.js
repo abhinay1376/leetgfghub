@@ -172,11 +172,11 @@ async function handlePush(payload) {
     language:       payload.language,
     number:         payload.problemNumber,
     revisionNotes:  payload.revisionNotes || {},  // Pass revision notes to README builder
+    code:           payload.code,                  // Embed exact submitted code in README
   });
 
-  // Push code file and per-problem README sequentially to avoid SHA conflicts
-  // Code is pushed as-is (without revision notes comments prepended)
-  await gh.createOrUpdateFile(owner, repo, paths.codePath, payload.code, payload.commitMessage);
+  // Push only the per-problem README — it now contains the solution as a fenced code block.
+  // No standalone solution file (solution.java / .py / .cpp etc.) is created.
   await gh.createOrUpdateFile(owner, repo, paths.readmePath, readmeContent, `docs: add README for ${payload.problemTitle}`);
 
   // Update root README (best-effort — don't fail the whole push if this fails)

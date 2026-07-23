@@ -182,7 +182,7 @@ export function generateProblemPath(opts) {
  * @returns {string}
  */
 export function buildProblemReadme(opts) {
-  const { title, platform, difficulty, problemUrl, submissionDate, language, number, revisionNotes } = opts;
+  const { title, platform, difficulty, problemUrl, submissionDate, language, number, revisionNotes, code } = opts;
   const platformLabel = platform === "leetcode" ? "LeetCode" : "GeeksForGeeks";
   const displayNum    = number ? `${String(number).padStart(4, "0")}. ` : "";
   const diffLine      = difficulty ? `**Difficulty:** ${difficulty}  \n` : "";
@@ -213,6 +213,15 @@ export function buildProblemReadme(opts) {
     }
   }
 
+  // Determine the fenced code language identifier
+  // Maps internal language keys to markdown-supported fence tags
+  const fenceLang = (language || "").toLowerCase();
+
+  // Embed the exact submitted code as a fenced block.
+  // The code value comes from the commit dialog's #dsa-code-preview textarea,
+  // which is byte-for-byte what was pushed to GitHub.
+  const solutionCode = (code || "").trimEnd();
+
   return `# ${displayNum}${title}
 
 **Platform:** ${platformLabel}  
@@ -231,7 +240,9 @@ ${diffLine}**Problem Link:** [View Problem](${problemUrl})
 ${revisionSection}
 ## Solution
 
-See \`solution${getExtension(language)}\` in this folder.
+\`\`\`${fenceLang}
+${solutionCode}
+\`\`\`
 `;
 }
 
