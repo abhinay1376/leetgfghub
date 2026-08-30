@@ -17,6 +17,8 @@ import {
   buildProblemReadme,
   buildRootReadme,
   friendlyError,
+  countExistingSolutions,
+  getExistingSolutionNumbers,
 } from "./src/utils.js";
 import {
   rebuildFromRepository,
@@ -34,6 +36,13 @@ import {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === "CHECK_EXISTING_README") {
+    handleCheckExistingReadme(message.data)
+      .then(sendResponse)
+      .catch(err => sendResponse({ success: false, error: friendlyError(err) }));
+    return true;
+  }
+
   if (message.type === "PUSH_TO_GITHUB") {
     handlePush(message.data)
       .then(sendResponse)
@@ -121,6 +130,51 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // ---------------------------------------------------------------------------
+// Check existing README handler
+// ---------------------------------------------------------------------------
+
+/**
+ * @param {{
+ *   platform: "leetcode"|"gfg",
+ *   problemNumber?: number,
+ *   problemSlug: string,
+ *   problemTitle: string,
+ *   language: string,
+ * }} data
+ * @returns {Promise<{success: boolean, existingSolutionCount?: number, existingSolutionNumbers?: number[], error?: string}>}
+ */
+async function handleCheckExistingReadme(data) {
+  const config = await loadConfig();
+  validateConfig(config, data.platform);
+
+  const gh = new GitHubService(config.githubToken);
+  const { owner, repo, folderBase } = resolveTarget(config, data.platform);
+
+  const paths = generateProblemPath({
+    platform:     data.platform,
+    folderBase,
+    problemNumber: data.problemNumber,
+    problemSlug:   data.problemSlug,
+    problemTitle:  data.problemTitle,
+    language:      data.language,
+  });
+
+  const existing = await gh.getFile(owner, repo, paths.readmePath);
+  if (existing?.content) {
+    const readmeContent = _fromBase64(existing.content.replace(/\n/g, ""));
+    const solutionCount = countExistingSolutions(readmeContent);
+    return {
+      success: true,
+      hasExistingReadme: true,
+      existingSolutionCount: solutionCount,
+      existingSolutionNumbers: getExistingSolutionNumbers(readmeContent),
+    };
+  }
+
+  return { success: true, hasExistingReadme: false, existingSolutionCount: 0 };
+}
+
+// ---------------------------------------------------------------------------
 // Core: Push handler
 // ---------------------------------------------------------------------------
 
@@ -135,6 +189,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
  *   code: string,
  *   commitMessage: string,
  *   language: string,
+ *   revisionNotes?: Record<string, string>,
+ *   solutionAction?: "new"|"add"|"overwrite",
+ *   solutionNumber?: number,
  * }} PushPayload
  */
 
@@ -163,6 +220,36 @@ async function handlePush(payload) {
   const today      = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
   const problemUrl = payload.problemUrl || buildDefaultUrl(payload);
 
+  // ── Fetch existing README if it exists ────────────────────────────────
+  let existingContent = null;
+  let existingSolutionNumbers = [];
+  const existing = await gh.getFile(owner, repo, paths.readmePath);
+  if (existing?.content) {
+    existingContent = _fromBase64(existing.content.replace(/\n/g, ""));
+    existingSolutionNumbers = getExistingSolutionNumbers(existingContent);
+  }
+
+  // ── Determine solution action and number ─────────────────────────────
+  let solutionAction = payload.solutionAction || "new";
+  let solutionNumber = payload.solutionNumber || 1;
+
+  if (!existingContent) {
+    // No existing README — always create fresh as Solution 1.
+    solutionAction = "new";
+    solutionNumber = 1;
+  } else if (solutionAction !== "add" && solutionAction !== "overwrite") {
+    // README exists (regardless of how many ## Solution N sections it has).
+    // We MUST have an explicit user-chosen action. Never silently overwrite.
+    throw new GitHubError(
+      "An existing README was found. Please choose whether to add a new solution or overwrite an existing one.",
+      "BAD_REQUEST"
+    );
+  } else if (solutionAction === "add") {
+    solutionNumber = Math.max(0, ...existingSolutionNumbers) + 1;
+  } else if (solutionAction === "overwrite" && !existingSolutionNumbers.includes(solutionNumber)) {
+    throw new GitHubError(`Solution ${solutionNumber} does not exist.`, "BAD_REQUEST");
+  }
+
   const readmeContent = buildProblemReadme({
     title:          payload.problemTitle,
     platform:       payload.platform,
@@ -171,11 +258,19 @@ async function handlePush(payload) {
     submissionDate: today,
     language:       payload.language,
     number:         payload.problemNumber,
-    revisionNotes:  payload.revisionNotes || {},  // Pass revision notes to README builder
-    code:           payload.code,                  // Embed exact submitted code in README
+    revisionNotes: payload.revisionNotes || {},
+
+    code: payload.code,
+
+    existingContent,
+
+    solutionAction,
+
+    solutionNumber,
+
   });
 
-  // Push only the per-problem README — it now contains the solution as a fenced code block.
+  // Push only the per-problem README — it now contains solutions as fenced code blocks.
   // No standalone solution file (solution.java / .py / .cpp etc.) is created.
   await gh.createOrUpdateFile(owner, repo, paths.readmePath, readmeContent, `docs: add README for ${payload.problemTitle}`);
 

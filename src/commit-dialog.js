@@ -96,7 +96,7 @@ window.showCommitDialog = async function(meta) {
   // Deep graphite / macOS style colors
   const diffColors = { Easy: "#34C759", Medium: "#FF9F0A", Hard: "#FF453A" }; // Apple system colors
   const diffColor = diffColors[meta.difficulty] || "#8E8E93";
-  
+
   const platformColor = meta.platform === "leetcode" ? "#FFA116" : "#2E8B57";
   const platformBg = meta.platform === "leetcode" ? "rgba(255, 161, 22, 0.15)" : "rgba(46, 139, 87, 0.15)";
 
@@ -113,7 +113,7 @@ window.showCommitDialog = async function(meta) {
   overlay.style.cssText = [
     "position:fixed", "inset:0", "background:transparent",
     "z-index:2147483647",
-    "display:flex", "align-items:flex-end", "justify-content:flex-start",
+    "display:flex", "align-items:flex-end", "justify-content:flex-end",
     "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
     "pointer-events:none"
   ].join(";");
@@ -122,15 +122,15 @@ window.showCommitDialog = async function(meta) {
     <div id="dsa-pusher-card" style="
       background: rgba(22, 22, 24, 0.97);
       color: #F5F5F7;
-      border-radius: 0 20px 20px 0;
+      border-radius: 20px 0 0 20px;
       padding: 28px 24px;
       width: 400px;
       max-width: calc(100vw - 16px);
       max-height: 100vh;
       overflow-y: auto;
       margin: 0;
-      box-shadow: 8px 0 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
-      animation: dsaSlideInLeft 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
+      animation: dsaSlideInRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -138,18 +138,18 @@ window.showCommitDialog = async function(meta) {
       pointer-events: all;
     ">
       <style>
-        @keyframes dsaSlideInLeft {
-          0%   { opacity: 0; transform: translateX(-50px); }
+        @keyframes dsaSlideInRight {
+          0%   { opacity: 0; transform: translateX(50px); }
           100% { opacity: 1; transform: translateX(0); }
         }
         @keyframes dsaCheckDraw { to { stroke-dashoffset: 0; } }
-        
+
         .dsa-rev-field { margin-bottom: 10px; }
         .dsa-field-err { font-size: 11px; color: #FF453A; margin-top: 4px; min-height: 14px; }
         #dsa-pusher-card * { box-sizing: border-box; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif; }
         #dsa-pusher-card ::-webkit-scrollbar { width: 4px; }
         #dsa-pusher-card ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
-        
+
         /* Premium inputs */
         .dsa-input {
           width: 100%;
@@ -168,7 +168,7 @@ window.showCommitDialog = async function(meta) {
           box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
         }
         .dsa-input::placeholder { color: #5A5A60; font-style: normal; }
-        
+
         /* Buttons */
         .dsa-btn {
           padding: 12px;
@@ -188,7 +188,7 @@ window.showCommitDialog = async function(meta) {
         .dsa-btn-primary:hover { transform: scale(1.02); background: #FFFFFF; }
         .dsa-btn-primary:active { transform: scale(0.98); }
         .dsa-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-        
+
         .dsa-btn-secondary {
           background: rgba(255, 255, 255, 0.08);
           color: #EBEBF5;
@@ -196,7 +196,7 @@ window.showCommitDialog = async function(meta) {
         }
         .dsa-btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
         .dsa-btn-secondary:active { transform: scale(0.98); }
-        
+
         /* Typography */
         .dsa-label {
           display: block; font-size: 11px; font-weight: 600; color: #8E8E93;
@@ -269,7 +269,7 @@ window.showCommitDialog = async function(meta) {
           <div class="dsa-field-err" id="dsa-err-intuition"></div>
         </div>
         <div class="dsa-rev-field">
-          <span class="dsa-label">Lines / Logic To Be Careful With</span>
+          <span class="dsa-label">Logic to Be Careful With</span>
           <textarea id="dsa-rev-careful" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Tricky conditions, off-by-one, overflow, pointer movement, mistakes made, etc."></textarea>
           <div class="dsa-field-err" id="dsa-err-careful"></div>
         </div>
@@ -277,6 +277,12 @@ window.showCommitDialog = async function(meta) {
           <span class="dsa-label">Edge Cases Handled</span>
           <textarea id="dsa-rev-edgeCases" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Empty input, single element, duplicates, negative numbers, etc."></textarea>
           <div class="dsa-field-err" id="dsa-err-edgeCases"></div>
+        </div>
+
+        <div class="dsa-rev-field">
+          <span class="dsa-label">Mistakes Made</span>
+          <textarea id="dsa-rev-mistakes" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="What went wrong in earlier attempts, and what did you change?"></textarea>
+          <div class="dsa-field-err" id="dsa-err-mistakes"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div class="dsa-rev-field" style="margin-bottom:0">
@@ -323,7 +329,7 @@ window.showCommitDialog = async function(meta) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           Push to GitHub
         </button>
-        
+
         <div style="display: flex; gap: 10px;">
           <button id="dsa-skip-btn" class="dsa-btn dsa-btn-secondary" style="flex: 1;">Save for Later</button>
           <button id="dsa-cancel-btn" class="dsa-btn" style="flex: 1; background: transparent; color: #8E8E93;">Cancel</button>
@@ -337,7 +343,7 @@ window.showCommitDialog = async function(meta) {
   document.body.appendChild(overlay);
 
   // ── Revision Notes Validation ────────────────────────────────────────────
-  const _REV_KEYS = ["intuition", "careful", "edgeCases", "timeComplexity", "spaceComplexity"];
+  const _REV_KEYS = ["intuition", "careful", "edgeCases", "mistakes", "timeComplexity", "spaceComplexity"];
   const _COMPLEXITY_KEYS = new Set(["timeComplexity", "spaceComplexity"]);
   const _REJECTED = new Set(["*","none","na","n/a",".","..","...","test","abc","xyz","todo","tbd","asdf","aaa","-","--","nil","null","undefined","hi","ok"]);
 
@@ -379,7 +385,230 @@ window.showCommitDialog = async function(meta) {
     _dismissOverlay(overlay);
   };
 
+  // ── Helper: Show choice dialog for multiple solutions ─────────────────────
+  async function _showChoiceDialog(existingSolutionNumbers) {
+    return new Promise((resolve) => {
+      const choiceOverlay = document.createElement("div");
+      choiceOverlay.style.cssText = [
+        "position:fixed", "inset:0", "background:rgba(0,0,0,0.6)", "z-index:2147483648",
+        "display:flex", "align-items:center", "justify-content:center",
+        "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
+        "backdrop-filter:blur(4px)"
+      ].join(";");
+
+      choiceOverlay.innerHTML = `
+        <div id="dsa-choice-card" style="
+          background: rgba(22, 22, 24, 0.97);
+          color: #F5F5F7;
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 500px;
+          width: 90%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
+          animation: dsaChoiceIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        ">
+          <style>
+            @keyframes dsaChoiceIn {
+              0%   { opacity: 0; transform: scale(0.95); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+          </style>
+          <h3 style="font-size: 18px; font-weight: 700; color: #F5F5F7; margin: 0 0 24px 0;">How do you want to save this solution?</h3>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button id="dsa-choice-add" class="dsa-btn dsa-btn-primary" style="flex: 1; padding: 16px; justify-content: flex-start; flex-direction: column; align-items: flex-start; gap: 6px;">
+              <div style="font-weight: 600;">Add as New Solution</div>
+              <div style="font-size: 12px; color: #8E8E93; font-weight: 400;">Keep existing solutions and append this as Solution ${Math.max(...existingSolutionNumbers, 0) + 1}.</div>
+            </button>
+
+            <button id="dsa-choice-overwrite" class="dsa-btn dsa-btn-secondary" style="flex: 1; padding: 16px; justify-content: flex-start; flex-direction: column; align-items: flex-start; gap: 6px;">
+              <div style="font-weight: 600;">Overwrite Existing Solution</div>
+              <div style="font-size: 12px; color: #8E8E93; font-weight: 400;">Replace one of the existing solutions with this new code.</div>
+            </button>
+
+            <button id="dsa-choice-cancel" class="dsa-btn" style="padding: 10px; background: transparent; color: #8E8E93;">Cancel</button>
+          </div>
+        </div>
+      `;
+
+      const btnAdd = choiceOverlay.querySelector("#dsa-choice-add");
+      const btnOverwrite = choiceOverlay.querySelector("#dsa-choice-overwrite");
+      const btnCancel = choiceOverlay.querySelector("#dsa-choice-cancel");
+
+      btnAdd.onclick = () => {
+        choiceOverlay.remove();
+        resolve({ action: "add" });
+      };
+
+      btnOverwrite.onclick = async () => {
+        choiceOverlay.remove();
+        const selectedSolution = await _showSolutionSelector(existingSolutionNumbers);
+        if (selectedSolution !== null) {
+          resolve({ action: "overwrite", solutionNumber: selectedSolution });
+        } else {
+          resolve({ action: "cancel" });
+        }
+      };
+
+      btnCancel.onclick = () => {
+        choiceOverlay.remove();
+        resolve({ action: "cancel" });
+      };
+
+      choiceOverlay.onclick = (e) => {
+        if (e.target === choiceOverlay) {
+          choiceOverlay.remove();
+          resolve({ action: "cancel" });
+        }
+      };
+
+      document.body.appendChild(choiceOverlay);
+    });
+  }
+
+  // ── Helper: Show solution selector dialog ────────────────────────────────
+  async function _showSolutionSelector(existingSolutionNumbers) {
+    return new Promise((resolve) => {
+      const selectorOverlay = document.createElement("div");
+      selectorOverlay.style.cssText = [
+        "position:fixed", "inset:0", "background:rgba(0,0,0,0.6)", "z-index:2147483649",
+        "display:flex", "align-items:center", "justify-content:center",
+        "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
+        "backdrop-filter:blur(4px)"
+      ].join(";");
+
+      let optionsHtml = "";
+      for (const solutionNumber of existingSolutionNumbers) {
+        optionsHtml += `
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.04); cursor: pointer; transition: background 0.2s;">
+            <input type="radio" name="solution-select" value="${solutionNumber}" style="cursor: pointer;"> Solution ${solutionNumber}
+          </label>
+        `;
+      }
+
+      selectorOverlay.innerHTML = `
+        <div id="dsa-selector-card" style="
+          background: rgba(22, 22, 24, 0.97);
+          color: #F5F5F7;
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 500px;
+          width: 90%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
+          animation: dsaChoiceIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        ">
+          <h3 style="font-size: 18px; font-weight: 700; color: #F5F5F7; margin: 0 0 24px 0;">Which solution do you want to overwrite?</h3>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+            ${optionsHtml}
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <button id="dsa-selector-cancel" class="dsa-btn dsa-btn-secondary" style="flex: 1;">Cancel</button>
+            <button id="dsa-selector-confirm" class="dsa-btn dsa-btn-primary" style="flex: 1;">Continue</button>
+          </div>
+        </div>
+      `;
+
+      const radioButtons = selectorOverlay.querySelectorAll('input[name="solution-select"]');
+      if (radioButtons.length > 0) radioButtons[0].checked = true;
+
+      const btnCancel = selectorOverlay.querySelector("#dsa-selector-cancel");
+      const btnConfirm = selectorOverlay.querySelector("#dsa-selector-confirm");
+
+      btnCancel.onclick = () => {
+        selectorOverlay.remove();
+        resolve(null);
+      };
+
+      btnConfirm.onclick = async () => {
+        const selected = selectorOverlay.querySelector('input[name="solution-select"]:checked');
+        const solutionNumber = selected ? parseInt(selected.value) : 1;
+        selectorOverlay.remove();
+        const confirmed = await _showConfirmOverwrite(solutionNumber);
+        resolve(confirmed ? solutionNumber : null);
+      };
+
+      selectorOverlay.onclick = (e) => {
+        if (e.target === selectorOverlay) {
+          selectorOverlay.remove();
+          resolve(null);
+        }
+      };
+
+      document.body.appendChild(selectorOverlay);
+    });
+  }
+
+  // ── Helper: Show confirmation before overwriting ────────────────────────
+  async function _showConfirmOverwrite(solutionNumber) {
+    return new Promise((resolve) => {
+      const confirmOverlay = document.createElement("div");
+      confirmOverlay.style.cssText = [
+        "position:fixed", "inset:0", "background:rgba(0,0,0,0.6)", "z-index:2147483650",
+        "display:flex", "align-items:center", "justify-content:center",
+        "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',system-ui,sans-serif",
+        "backdrop-filter:blur(4px)"
+      ].join(";");
+
+      confirmOverlay.innerHTML = `
+        <div id="dsa-confirm-card" style="
+          background: rgba(22, 22, 24, 0.97);
+          color: #F5F5F7;
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 500px;
+          width: 90%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.07);
+          animation: dsaChoiceIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        ">
+          <h3 style="font-size: 18px; font-weight: 700; color: #F5F5F7; margin: 0 0 16px 0;">Are you sure?</h3>
+          <p style="font-size: 14px; color: #EBEBF5; margin: 0 0 24px 0; line-height: 1.5;">
+            The existing code and notes for <strong>Solution ${solutionNumber}</strong> will be replaced with this new solution.
+          </p>
+
+          <div style="display: flex; gap: 10px;">
+            <button id="dsa-confirm-cancel" class="dsa-btn dsa-btn-secondary" style="flex: 1;">Cancel</button>
+            <button id="dsa-confirm-overwrite" class="dsa-btn dsa-btn-primary" style="flex: 1; background: #FF453A;">Overwrite Solution</button>
+          </div>
+        </div>
+      `;
+
+      const btnCancel = confirmOverlay.querySelector("#dsa-confirm-cancel");
+      const btnConfirm = confirmOverlay.querySelector("#dsa-confirm-overwrite");
+
+      btnCancel.onclick = () => {
+        confirmOverlay.remove();
+        resolve(false);
+      };
+
+      btnConfirm.onclick = () => {
+        confirmOverlay.remove();
+        resolve(true);
+      };
+
+      confirmOverlay.onclick = (e) => {
+        if (e.target === confirmOverlay) {
+          confirmOverlay.remove();
+          resolve(false);
+        }
+      };
+
+      document.body.appendChild(confirmOverlay);
+    });
+  }
+
   // ── Push ──────────────────────────────────────────────────────────────────
+
+  // Helper: fully reset the push button to its idle state
+  function _resetPushBtn() {
+    const btn = document.getElementById("dsa-push-btn");
+    if (!btn) return;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Push to GitHub`;
+    btn.disabled = false;
+    btn.dataset.pushing = "0";
+  }
+
   document.getElementById("dsa-push-btn").onclick = async () => {
     const commitMessage = document.getElementById("dsa-commit-msg").value.trim();
     const language      = document.getElementById("dsa-lang-select").value;
@@ -407,8 +636,8 @@ window.showCommitDialog = async function(meta) {
     btn.dataset.pushing = "1";
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Pushing...`;
     btn.disabled  = true;
-    setStatus(statusEl, "Connecting to GitHub...", "#64D2FF");
-    
+    setStatus(statusEl, "Checking existing solutions...", "#64D2FF");
+
     // Add spin keyframe to document if missing
     if (!document.getElementById("dsa-spin-style")) {
       const style = document.createElement("style");
@@ -418,6 +647,77 @@ window.showCommitDialog = async function(meta) {
     }
 
     try {
+      // Step 1: Check if a README already exists for this problem.
+      // We MUST do this before sending PUSH_TO_GITHUB to decide the correct action.
+      let checkResponse;
+      let checkFailed = false;
+      try {
+        checkResponse = await chrome.runtime.sendMessage({
+          type: "CHECK_EXISTING_README",
+          data: {
+            platform:       meta.platform,
+            problemNumber:  meta.number,
+            problemSlug:    meta.slug,
+            problemTitle:   meta.title,
+            language:       language,
+          },
+        });
+      } catch (checkErr) {
+        // Message send itself failed (e.g., extension context invalidated).
+        // This is a hard failure — we genuinely cannot determine README state.
+        setStatus(statusEl, "Extension error: " + checkErr.message + " — please reload the page and try again.", "#FF453A");
+        _resetPushBtn();
+        return;
+      }
+
+      // In MV3, sendMessage can return undefined if the service worker restarts
+      // mid-flight, or return success:false on a soft error (e.g., GitHub API down).
+      // In both cases, the safest behaviour is to ASK the user rather than
+      // silently proceeding with solutionAction="new" which could overwrite.
+      if (!checkResponse || !checkResponse.success) {
+        checkFailed = true;
+      }
+
+      let solutionAction = "new";
+      let solutionNumber = 1;
+
+      // Step 2: Decide whether to show the choice dialog.
+      //
+      //  hasExistingReadme === true  → README confirmed to exist on GitHub → show dialog
+      //  checkFailed === true        → check was inconclusive (SW sleeping, API error)
+      //                                → show dialog as safe fallback to avoid silent overwrite
+      //  hasExistingReadme === false → README confirmed absent → proceed as new
+      const readmeConfirmedAbsent = (!checkFailed && checkResponse.hasExistingReadme === false);
+
+      if (!readmeConfirmedAbsent) {
+        // Either README exists, or we couldn't confirm it doesn't exist.
+        // Always ask the user.
+        const existingSolutionNumbers = (!checkFailed && checkResponse.existingSolutionNumbers?.length > 0)
+          ? checkResponse.existingSolutionNumbers
+          : []; // unknown or no parsed sections — dialog still shows
+
+        if (checkFailed) {
+          setStatus(statusEl, "Could not confirm README state. Please choose how to save.", "#FF9F0A");
+        }
+
+        const choice = await _showChoiceDialog(existingSolutionNumbers);
+
+        if (choice.action === "cancel") {
+          setStatus(statusEl, "Cancelled.", "#8E8E93");
+          _resetPushBtn();
+          return;
+        } else if (choice.action === "add") {
+          solutionAction = "add";
+          solutionNumber = Math.max(0, ...existingSolutionNumbers) + 1;
+        } else if (choice.action === "overwrite") {
+          solutionAction = "overwrite";
+          solutionNumber = choice.solutionNumber;
+        }
+      }
+      // else: README confirmed absent on GitHub → solutionAction stays "new", solutionNumber stays 1
+
+      setStatus(statusEl, "Connecting to GitHub...", "#64D2FF");
+
       const response = await chrome.runtime.sendMessage({
         type: "PUSH_TO_GITHUB",
         data: {
@@ -431,13 +731,15 @@ window.showCommitDialog = async function(meta) {
           commitMessage,
           language,
           revisionNotes,
+          solutionAction,    // "new", "add", or "overwrite"
+          solutionNumber,    // Which solution to add/overwrite
         },
       });
 
       if (response?.success) {
         setStatus(statusEl, "Successfully pushed to GitHub!", "#34C759");
         btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Done`;
-        
+
         // Show success animation state
         const card = document.getElementById("dsa-pusher-card");
         card.style.transform = "scale(1.02)";
@@ -445,13 +747,11 @@ window.showCommitDialog = async function(meta) {
         setTimeout(() => _dismissOverlay(overlay), 2000);
       } else {
         setStatus(statusEl, response?.error || "Push failed.", "#FF453A");
-        btn.innerHTML = "Push to GitHub";
-        btn.disabled  = false;
+        _resetPushBtn();
       }
     } catch (e) {
       setStatus(statusEl, e.message, "#FF453A");
-      btn.innerHTML = "Push to GitHub";
-      btn.disabled  = false;
+      _resetPushBtn();
     }
   };
 
@@ -468,7 +768,7 @@ function _dismissOverlay(overlay) {
   const card = overlay.querySelector('#dsa-pusher-card');
   if (card) {
     card.style.transition = "transform 0.25s cubic-bezier(0.4, 0, 1, 1), opacity 0.25s ease";
-    card.style.transform  = "translateX(-60px)";
+    card.style.transform  = "translateX(60px)";
     card.style.opacity    = "0";
   }
   overlay.style.transition = "opacity 0.25s ease";
