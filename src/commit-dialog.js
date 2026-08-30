@@ -278,6 +278,7 @@ window.showCommitDialog = async function(meta) {
           <textarea id="dsa-rev-edgeCases" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="Empty input, single element, duplicates, negative numbers, etc."></textarea>
           <div class="dsa-field-err" id="dsa-err-edgeCases"></div>
         </div>
+
         <div class="dsa-rev-field">
           <span class="dsa-label">Mistakes Made</span>
           <textarea id="dsa-rev-mistakes" class="dsa-input" rows="2" style="resize:vertical;line-height:1.4;font-size:12px" placeholder="What went wrong in earlier attempts, and what did you change?"></textarea>

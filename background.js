@@ -258,11 +258,16 @@ async function handlePush(payload) {
     submissionDate: today,
     language:       payload.language,
     number:         payload.problemNumber,
-    revisionNotes:  payload.revisionNotes || {},
-    code:           payload.code,
+    revisionNotes: payload.revisionNotes || {},
+
+    code: payload.code,
+
     existingContent,
+
     solutionAction,
+
     solutionNumber,
+
   });
 
   // Push only the per-problem README — it now contains solutions as fenced code blocks.

@@ -38,12 +38,12 @@ function wrapComment(language, body) {
 // ── Revision note fields ────────────────────────────────────────────────────
 
 export const REVISION_FIELDS = [
-  { key: "intuition",       label: "Intuition",                       placeholder: "How did you arrive at this approach? What pattern did you recognize?" },
-  { key: "careful",         label: "Logic to Be Careful With", placeholder: "Tricky conditions, off-by-one, overflow, pointer movement, etc." },
-  { key: "edgeCases",       label: "Edge Cases Handled",               placeholder: "Empty input, single element, duplicates, negative numbers, etc." },
-  { key: "mistakes",        label: "Mistakes Made",                    placeholder: "What went wrong in earlier attempts, and what did you change?" },
-  { key: "timeComplexity",  label: "Time Complexity",                  placeholder: "e.g. O(n log n)" },
-  { key: "spaceComplexity", label: "Space Complexity",                 placeholder: "e.g. O(n)" },
+  { key: "intuition",       label: "Intuition",                  placeholder: "How did you arrive at this approach? What pattern did you recognize?" },
+  { key: "careful",         label: "Logic to Be Careful With",   placeholder: "Tricky conditions, off-by-one, overflow, pointer movement, etc." },
+  { key: "edgeCases",       label: "Edge Cases Handled",          placeholder: "Empty input, single element, duplicates, negative numbers, etc." },
+  { key: "mistakes",        label: "Mistakes Made",               placeholder: "What went wrong in earlier attempts, and what did you change?" },
+  { key: "timeComplexity",  label: "Time Complexity",             placeholder: "e.g. O(n log n)" },
+  { key: "spaceComplexity", label: "Space Complexity",            placeholder: "e.g. O(n)" },
 ];
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -184,15 +184,15 @@ export function buildReadmeNotes(opts) {
     lines.push("");
   }
 
-  if (notes.mistakes?.trim()) {
-    lines.push("### Mistakes Made");
-    lines.push(notes.mistakes.trim());
-    lines.push("");
-  }
-
   if (notes.edgeCases?.trim()) {
     lines.push("### Edge Cases Handled");
     lines.push(notes.edgeCases.trim());
+    lines.push("");
+  }
+
+  if (notes.mistakes?.trim()) {
+    lines.push("### Mistakes Made");
+    lines.push(notes.mistakes.trim());
     lines.push("");
   }
 
