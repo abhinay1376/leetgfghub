@@ -163,6 +163,127 @@ export function generateProblemPath(opts) {
 }
 
 // ---------------------------------------------------------------------------
+// README Solution Parsing & Merging
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse existing README to count solutions.
+ * Looks for "## Solution N" pattern.
+ * @param {string} readmeContent
+ * @returns {number} Count of existing solutions
+ */
+export function countExistingSolutions(readmeContent) {
+  if (!readmeContent || typeof readmeContent !== "string") return 0;
+  return getExistingSolutionNumbers(readmeContent).length;
+}
+
+/**
+ * Return the solution numbers present in a README, sorted numerically.
+ * @param {string} readmeContent
+ * @returns {number[]}
+ */
+export function getExistingSolutionNumbers(readmeContent) {
+  if (!readmeContent || typeof readmeContent !== "string") return [];
+  const numbers = [...readmeContent.matchAll(/^##\s+Solution\s+(\d+)$/gm)]
+    .map(match => Number(match[1]));
+  return [...new Set(numbers)].sort((a, b) => a - b);
+}
+
+/**
+ * Extract a specific solution from existing README.
+ * Returns everything from "## Solution N" to the next "## Solution" or end of file.
+ * @param {string} readmeContent
+ * @param {number} solutionNumber
+ * @returns {string} The solution section, including the header
+ */
+export function extractSolution(readmeContent, solutionNumber) {
+  if (!readmeContent) return null;
+  const pattern = new RegExp(`^## Solution ${solutionNumber}$[\\s\\S]*?(?=^## Solution \\d+$|$)`, "gm");
+  const match = readmeContent.match(pattern);
+  return match ? match[0].trim() : null;
+}
+
+/**
+ * Generate a single solution block to add or replace.
+ * @param {{
+ *   solutionNumber: number,
+ *   code: string,
+ *   language: string,
+ *   revisionNotes?: Record<string, string>,
+ * }} opts
+ * @returns {string}
+ */
+export function buildSolutionBlock(opts) {
+  const { solutionNumber, code, language, revisionNotes } = opts;
+  const timeComplexity = revisionNotes?.timeComplexity?.trim() || "O(?)";
+  const spaceComplexity = revisionNotes?.spaceComplexity?.trim() || "O(?)";
+
+  let sections = [];
+
+  if (revisionNotes?.intuition?.trim()) {
+    sections.push("### Intuition\n" + revisionNotes.intuition.trim());
+  }
+
+  if (revisionNotes?.careful?.trim()) {
+    sections.push("### Logic to Be Careful With\n" + revisionNotes.careful.trim());
+  }
+
+  if (revisionNotes?.edgeCases?.trim()) {
+    sections.push("### Edge Cases Handled\n" + revisionNotes.edgeCases.trim());
+  }
+
+  if (revisionNotes?.mistakes?.trim()) {
+    sections.push("### Mistakes Made\n" + revisionNotes.mistakes.trim());
+  }
+
+  sections.push(`**Time Complexity:** ${timeComplexity}  \n**Space Complexity:** ${spaceComplexity}`);
+
+  const fenceLang = (language || "").toLowerCase();
+  const solutionCode = code || "";
+
+  return `## Solution ${solutionNumber}
+
+\`\`\`${fenceLang}
+${solutionCode}
+\`\`\`
+
+${sections.join("\n\n")}`;
+}
+
+/**
+ * Merge a new solution into existing README (append as new solution).
+ * @param {string} existingContent
+ * @param {string} newSolutionBlock
+ * @returns {string}
+ */
+export function appendSolutionToReadme(existingContent, newSolutionBlock) {
+  if (!existingContent || !existingContent.trim()) {
+    return newSolutionBlock;
+  }
+  return existingContent.trimEnd() + "\n\n" + newSolutionBlock + "\n";
+}
+
+/**
+ * Replace a specific solution in existing README.
+ * @param {string} existingContent
+ * @param {number} solutionNumber
+ * @param {string} newSolutionBlock
+ * @returns {string|null} Updated content, or null if solution not found
+ */
+export function replaceSolutionInReadme(existingContent, solutionNumber, newSolutionBlock) {
+  if (!existingContent) return null;
+
+  const pattern = new RegExp(`^## Solution ${solutionNumber}$[\\s\\S]*?(?=^## Solution \\d+$|$)`, "gm");
+  const match = existingContent.match(pattern);
+
+  if (!match) return null;
+
+  // Replace the matched section with the new solution block
+  const trailingWhitespace = match[0].match(/\s*$/)?.[0] || "";
+  return existingContent.replace(pattern, newSolutionBlock.trimEnd() + trailingWhitespace);
+}
+
+// ---------------------------------------------------------------------------
 // README generators
 // ---------------------------------------------------------------------------
 
@@ -177,21 +298,59 @@ export function generateProblemPath(opts) {
  *   submissionDate: string,
  *   language: string,
  *   number?: number|string,
+ *   revisionNotes?: Record<string, string>,
+ *   code: string,
+ *   existingContent?: string,     // Existing README if updating
+ *   solutionAction?: "new"|"add"|"overwrite",
+ *   solutionNumber?: number,       // Which solution to add/overwrite
  * }} opts
  * @returns {string}
  */
 export function buildProblemReadme(opts) {
-  const { title, platform, difficulty, problemUrl, submissionDate, language, number } = opts;
+  const {
+    title, platform, difficulty, problemUrl, submissionDate, language, number,
+    revisionNotes, code, existingContent, solutionAction, solutionNumber
+  } = opts;
+
   const platformLabel = platform === "leetcode" ? "LeetCode" : "GeeksForGeeks";
   const displayNum    = number ? `${String(number).padStart(4, "0")}. ` : "";
   const diffLine      = difficulty ? `**Difficulty:** ${difficulty}  \n` : "";
 
-  return `# ${displayNum}${title}
+  // Build the new solution block
+  const newSolutionBlock = buildSolutionBlock({
+    solutionNumber: solutionNumber || 1,
+    code,
+    language,
+    revisionNotes,
+  });
 
-**Platform:** ${platformLabel}  
-${diffLine}**Problem Link:** [View Problem](${problemUrl})  
-**Submission Date:** ${submissionDate}  
-**Language:** ${language}  
+  // Handle solution merging/replacing
+  let fullContent = "";
+
+  if (solutionAction === "add" && existingContent) {
+    // Append new solution to existing README (preserving header and other sections)
+    fullContent = appendSolutionToReadme(existingContent, newSolutionBlock);
+  } else if (solutionAction === "overwrite" && existingContent && solutionNumber) {
+    // Replace specific solution in existing README
+    const replaced = replaceSolutionInReadme(existingContent, solutionNumber, newSolutionBlock);
+    if (!replaced) throw new Error(`Solution ${solutionNumber} does not exist`);
+    fullContent = replaced;
+  } else if (existingContent) {
+    // README exists but solutionAction is neither "add" nor "overwrite".
+    // background.js guards this before we reach here, but throw as a fail-safe
+    // to prevent any silent append or overwrite.
+    throw new Error(
+      "An existing README was found but no explicit solution action (add/overwrite) was provided. " +
+      "This is a bug — please report it."
+    );
+  } else {
+    // No existing content: create new README with header and first solution
+    fullContent = `# ${displayNum}${title}
+
+**Platform:** ${platformLabel}
+${diffLine}**Problem Link:** [View Problem](${problemUrl})
+**Submission Date:** ${submissionDate}
+**Language:** ${language}
 
 ## Approach
 
@@ -199,13 +358,13 @@ ${diffLine}**Problem Link:** [View Problem](${problemUrl})
 
 ## Time & Space Complexity
 
-**Time Complexity:** O(?)  
-**Space Complexity:** O(?)  
+<!-- Note: See individual solution sections below -->
 
-## Solution
-
-See \`solution${getExtension(language)}\` in this folder.
+${newSolutionBlock}
 `;
+  }
+
+  return fullContent;
 }
 
 /**
